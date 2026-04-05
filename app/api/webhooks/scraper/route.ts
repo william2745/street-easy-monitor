@@ -19,6 +19,15 @@ type ApifyListing = {
   title?: string
 }
 
+async function fetchDatasetItems(datasetId: string): Promise<ApifyListing[]> {
+  const res = await fetch(
+    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${process.env.APIFY_API_TOKEN}&format=json&clean=true`
+  )
+  if (!res.ok) return []
+  const items = await res.json()
+  return Array.isArray(items) ? items : []
+}
+
 export async function POST(req: NextRequest) {
   // Verify webhook secret
   const { searchParams } = new URL(req.url)
@@ -28,12 +37,17 @@ export async function POST(req: NextRequest) {
 
   const payload = await req.json()
 
-  // Apify webhook payload shape
-  const monitorId: string = payload.resource?.input?.monitorId ?? payload.monitorId
-  const userId: string = payload.resource?.input?.userId ?? payload.userId
-  const listings: ApifyListing[] = payload.resource?.items ?? payload.items ?? []
+  // monitorId/userId are passed as query params on the webhook URL
+  const monitorId: string = searchParams.get('monitorId') ?? payload.resource?.input?.monitorId ?? payload.monitorId
+  const userId: string = searchParams.get('userId') ?? payload.resource?.input?.userId ?? payload.userId
   const apifyRunId: string = payload.resource?.id ?? payload.runId ?? ''
   const eventType: string = payload.eventType ?? ''
+  const defaultDatasetId: string = payload.resource?.defaultDatasetId ?? ''
+
+  // Fetch listings from Apify dataset (cheerio-scraper stores results there)
+  const listings: ApifyListing[] = defaultDatasetId
+    ? await fetchDatasetItems(defaultDatasetId)
+    : (payload.resource?.items ?? payload.items ?? [])
 
   if (!monitorId) {
     return NextResponse.json({ error: 'Missing monitorId' }, { status: 400 })
