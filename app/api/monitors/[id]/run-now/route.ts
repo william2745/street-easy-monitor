@@ -33,10 +33,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ ok: true })
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[run-now] trigger failed:', message)
     await serviceSupabase
       .from('scraper_runs')
       .update({ status: 'failed', finished_at: new Date().toISOString() })
       .eq('id', runRecord?.id)
-    return NextResponse.json({ error: 'Scraper trigger failed' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

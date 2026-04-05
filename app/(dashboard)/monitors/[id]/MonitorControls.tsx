@@ -10,11 +10,14 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [runStatus, setRunStatus] = useState<'idle' | 'queued' | 'error'>('idle')
+  const [runError, setRunError] = useState('')
 
   async function runNow() {
     setScanning(true)
     setRunStatus('idle')
+    setRunError('')
     const res = await fetch(`/api/monitors/${monitor.id}/run-now`, { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
     setScanning(false)
     if (res.ok) {
       setRunStatus('queued')
@@ -22,7 +25,8 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       setTimeout(() => setRunStatus('idle'), 6000)
     } else {
       setRunStatus('error')
-      setTimeout(() => setRunStatus('idle'), 6000)
+      setRunError(data.error ?? 'Unknown error')
+      setTimeout(() => { setRunStatus('idle'); setRunError('') }, 10000)
     }
   }
 
@@ -45,7 +49,11 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
   }
 
   return (
-    <div className="flex items-center gap-2 shrink-0">
+    <div className="flex flex-col items-end gap-2 shrink-0">
+      {runError && (
+        <p className="text-xs text-red-500 max-w-xs text-right">{runError}</p>
+      )}
+      <div className="flex items-center gap-2">
       <button
         onClick={runNow}
         disabled={scanning}
@@ -79,6 +87,7 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       >
         Delete
       </button>
+      </div>
     </div>
   )
 }
