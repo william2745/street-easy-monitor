@@ -6,95 +6,70 @@ const APIFY_API_BASE = 'https://api.apify.com/v2'
 // client-side listing results are visible. No rental required.
 const ACTOR_ID = 'apify~playwright-scraper'
 
-// Page function for Apify Playwright Scraper.
-// StreetEasy loads listings via XHR after initial page load — we intercept those
-// API responses directly instead of parsing the DOM.
+// Page function — dumps __NEXT_DATA__ structure so we know where listings live,
+// then extracts them. Block images/CSS to load faster.
 const STREETEASY_PAGE_FUNCTION = /* js */ `
 async function pageFunction(context) {
   const { page, log } = context;
-  const capturedListings = [];
 
-  function extractFromJson(json) {
-    var raw = json.listings || json.results || json.rentals || json.items || [];
-    if (!Array.isArray(raw) || raw.length === 0) return;
-    raw.forEach(function(l) {
-      var id = l.id || l.listingId || l.listing_id;
-      if (!id) return;
-      capturedListings.push({
-        listingId: String(id),
-        url: l.url || ('https://streeteasy.com/rental/' + id),
-        address: l.full_address || l.address || l.streetAddress || null,
-        neighborhood: l.areaName || l.neighborhood || null,
-        bedrooms: l.bedrooms != null ? l.bedrooms : (l.beds != null ? l.beds : null),
-        price: l.price || l.listingPrice || l.rent || null,
-        noFee: !!(l.noFee || l.no_fee),
-        petFriendly: !!(l.petFriendly || l.pets_allowed || l.petsAllowed),
-        hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
-      });
+  // Block images, fonts, CSS — cuts load time significantly
+  await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf,otf,css}', function(r) {
+    r.abort();
+  });
+
+  // Wait for content — shorter timeout
+  await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(function() {});
+
+  const result = await page.evaluate(function() {
+    var el = document.getElementById('__NEXT_DATA__');
+    if (!el) return { error: 'no __NEXT_DATA__', listings: [] };
+
+    var data;
+    try { data = JSON.parse(el.textContent); } catch(e) { return { error: 'parse error', listings: [] }; }
+
+    var pp = data && data.props && data.props.pageProps;
+    if (!pp) return { error: 'no pageProps', listings: [] };
+
+    // Log structure so we know what keys exist and their sizes
+    var keys = Object.keys(pp).map(function(k) {
+      return k + ':' + JSON.stringify(pp[k]).length;
     });
-  }
 
-  // Intercept XHR/fetch responses that contain listing data
-  await page.route('**', async function(route) {
-    var response;
-    try {
-      response = await route.fetch();
-    } catch(e) {
-      await route.abort();
-      return;
-    }
-    // Check JSON responses for listing arrays
-    try {
-      var ct = response.headers()['content-type'] || '';
-      if (ct.includes('json')) {
-        var text = await response.text();
-        var json = JSON.parse(text);
-        extractFromJson(json);
-        // Also check nested: { data: { listings: [...] } }
-        if (json.data) extractFromJson(json.data);
-      }
-    } catch(e) {}
-    await route.fulfill({ response: response });
-  });
-
-  // Wait for network to go idle — all XHR listing calls should complete
-  await page.waitForLoadState('networkidle', { timeout: 25000 }).catch(function() {
-    log.warning('networkidle timeout — using captured so far');
-  });
-
-  // If XHR interception found nothing, fall back to __NEXT_DATA__
-  if (capturedListings.length === 0) {
-    var fromNextData = await page.evaluate(function() {
-      var results = [];
-      var el = document.getElementById('__NEXT_DATA__');
-      if (!el) return results;
-      try {
-        var data = JSON.parse(el.textContent);
-        var pp = data && data.props && data.props.pageProps;
-        var raw = (pp && pp.listings) || (pp && pp.searchListings) || [];
-        raw.forEach(function(l) {
-          var id = l.id || l.listingId;
-          if (!id) return;
-          results.push({
-            listingId: String(id),
-            url: l.url || ('https://streeteasy.com/rental/' + id),
-            address: l.full_address || l.address || null,
-            neighborhood: l.areaName || l.neighborhood || null,
-            bedrooms: l.bedrooms != null ? l.bedrooms : null,
-            price: l.price || null,
-            noFee: !!(l.noFee || l.no_fee),
-            petFriendly: !!(l.petFriendly || l.pets_allowed),
-            hasLaundry: !!(l.hasLaundry),
+    // Walk ALL arrays in pageProps looking for objects with id+price (listing shape)
+    var found = [];
+    function walk(obj, depth) {
+      if (depth > 4 || !obj || typeof obj !== 'object') return;
+      if (Array.isArray(obj)) {
+        if (obj.length > 0 && obj[0] && (obj[0].id || obj[0].listingId) && (obj[0].price != null || obj[0].address)) {
+          obj.forEach(function(l) {
+            var id = l.id || l.listingId || l.listing_id;
+            if (!id) return;
+            found.push({
+              listingId: String(id),
+              url: l.url || ('https://streeteasy.com/rental/' + id),
+              address: l.full_address || l.address || l.streetAddress || null,
+              neighborhood: l.areaName || l.neighborhood || null,
+              bedrooms: l.bedrooms != null ? l.bedrooms : (l.beds != null ? l.beds : null),
+              price: l.price || l.listingPrice || l.rent || null,
+              noFee: !!(l.noFee || l.no_fee),
+              petFriendly: !!(l.petFriendly || l.pets_allowed || l.petsAllowed),
+              hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
+            });
           });
-        });
-      } catch(e) {}
-      return results;
-    });
-    fromNextData.forEach(function(l) { capturedListings.push(l); });
-  }
+        }
+        obj.forEach(function(item) { walk(item, depth + 1); });
+      } else {
+        Object.values(obj).forEach(function(v) { walk(v, depth + 1); });
+      }
+    }
+    walk(pp, 0);
 
-  log.info('Captured ' + capturedListings.length + ' listings via XHR/Next.js');
-  return capturedListings;
+    return { keys: keys.join(' | '), listingCount: found.length, listings: found };
+  });
+
+  log.info('__NEXT_DATA__ keys: ' + (result.keys || result.error));
+  log.info('Found ' + (result.listings || []).length + ' listings');
+  return result.listings || [];
 }
 `
 
