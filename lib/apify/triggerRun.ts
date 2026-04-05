@@ -2,38 +2,57 @@ import { Monitor } from '@/types/database'
 import { buildSearchUrl } from './buildSearchUrl'
 
 const APIFY_API_BASE = 'https://api.apify.com/v2'
-// Use Apify's own free Cheerio Scraper — no rental required, uses compute credits
-const ACTOR_ID = 'apify~cheerio-scraper'
+// Use Apify's free Playwright Scraper — renders JavaScript so StreetEasy's
+// client-side listing results are visible. No rental required.
+const ACTOR_ID = 'apify~playwright-scraper'
 
-// Page function injected into Apify's Cheerio Scraper to parse StreetEasy listings.
-// StreetEasy is a Next.js app — listing data is embedded in __NEXT_DATA__ JSON.
+// Page function for Apify Playwright Scraper.
+// Waits for StreetEasy listings to render, then extracts from DOM + __NEXT_DATA__.
 const STREETEASY_PAGE_FUNCTION = /* js */ `
 async function pageFunction(context) {
-  const { $ } = context;
-  const results = [];
+  const { page, log, request } = context;
 
-  // Primary: parse __NEXT_DATA__ (Next.js server-side JSON)
-  const nextDataText = $('script#__NEXT_DATA__').text();
-  if (nextDataText) {
-    try {
-      const data = JSON.parse(nextDataText);
-      const pp = data && data.props && data.props.pageProps;
-      const rawListings =
-        (pp && pp.listings) ||
-        (pp && pp.search && pp.search.listings) ||
-        (pp && pp.results) ||
-        (pp && pp.dehydratedState && pp.dehydratedState.queries
-          ? pp.dehydratedState.queries
-              .flatMap(function(q) { return (q && q.state && q.state.data && q.state.data.pages) || []; })
-              .flatMap(function(p) { return p.listings || p.results || []; })
-          : []);
+  // Wait for listing cards to appear (StreetEasy renders them client-side)
+  try {
+    await page.waitForSelector(
+      '[data-id], [data-listing-id], [class*="listingCard"], [class*="SearchResultCard"], li[class*="listing"]',
+      { timeout: 20000 }
+    );
+  } catch(e) {
+    log.warning('Listing selector timed out, trying __NEXT_DATA__ anyway');
+  }
 
-      if (rawListings && rawListings.length > 0) {
-        for (var i = 0; i < rawListings.length; i++) {
-          var l = rawListings[i];
+  const results = await page.evaluate(function() {
+    var listings = [];
+
+    // 1. Try __NEXT_DATA__ (Next.js SSR/hydration data)
+    var el = document.getElementById('__NEXT_DATA__');
+    if (el) {
+      try {
+        var data = JSON.parse(el.textContent);
+        var pp = data && data.props && data.props.pageProps;
+        var raw =
+          (pp && pp.listings) ||
+          (pp && pp.search && pp.search.listings) ||
+          (pp && pp.results) ||
+          (pp && pp.initialListings) ||
+          [];
+        // Also try dehydrated react-query state
+        if (raw.length === 0 && pp && pp.dehydratedState) {
+          var queries = pp.dehydratedState.queries || [];
+          for (var qi = 0; qi < queries.length; qi++) {
+            var pages = (queries[qi].state && queries[qi].state.data && queries[qi].state.data.pages) || [];
+            for (var pi = 0; pi < pages.length; pi++) {
+              var items = pages[pi].listings || pages[pi].results || pages[pi].items || [];
+              raw = raw.concat(items);
+            }
+          }
+        }
+        for (var i = 0; i < raw.length; i++) {
+          var l = raw[i];
           var id = l.id || l.listingId || l.listing_id;
           if (!id) continue;
-          results.push({
+          listings.push({
             listingId: String(id),
             url: l.url || ('https://streeteasy.com/rental/' + id),
             address: l.full_address || l.address || l.streetAddress || null,
@@ -43,37 +62,38 @@ async function pageFunction(context) {
             noFee: !!(l.noFee || l.no_fee),
             petFriendly: !!(l.petFriendly || l.pets_allowed),
             hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
-            imageUrl: null,
           });
         }
-      }
-    } catch(e) {
-      context.log.warning('__NEXT_DATA__ parse failed: ' + e.message);
+      } catch(e) {}
     }
-  }
 
-  // Fallback: parse listing cards from DOM
-  if (results.length === 0) {
-    $('article[data-id], [data-listing-id], .listingCard').each(function(_, el) {
-      var $el = $(el);
-      var listingId = $el.attr('data-id') || $el.attr('data-listing-id');
-      var link = $el.find('a[href*="/rental/"], a[href*="/building/"]').first().attr('href');
-      if (!link && !listingId) return;
-      var url = link
-        ? (link.indexOf('http') === 0 ? link : 'https://streeteasy.com' + link)
-        : ('https://streeteasy.com/rental/' + listingId);
-      var priceText = $el.find('[class*="price"]').first().text();
-      var price = parseInt(priceText.replace(/\\D/g, ''), 10) || null;
-      results.push({
-        listingId: listingId || null,
-        url: url,
-        address: $el.find('[class*="address"]').first().text().trim() || null,
-        price: price,
+    // 2. DOM fallback — rendered listing cards
+    if (listings.length === 0) {
+      var cards = document.querySelectorAll('[data-id], [data-listing-id], article[class*="listing"]');
+      cards.forEach(function(card) {
+        var lid = card.getAttribute('data-id') || card.getAttribute('data-listing-id');
+        var anchor = card.querySelector('a[href*="/rental/"], a[href*="/building/"]');
+        var href = anchor && anchor.getAttribute('href');
+        if (!href && !lid) return;
+        var url = href
+          ? (href.indexOf('http') === 0 ? href : 'https://streeteasy.com' + href)
+          : ('https://streeteasy.com/rental/' + lid);
+        var priceEl = card.querySelector('[class*="price"]');
+        var price = priceEl ? parseInt(priceEl.textContent.replace(/\\D/g,''), 10) || null : null;
+        var addrEl = card.querySelector('[class*="address"]');
+        listings.push({
+          listingId: lid || null,
+          url: url,
+          address: addrEl ? addrEl.textContent.trim() : null,
+          price: price,
+        });
       });
-    });
-  }
+    }
 
-  context.log.info('Found ' + results.length + ' listings on ' + context.request.url);
+    return listings;
+  });
+
+  log.info('Found ' + results.length + ' listings on ' + request.url);
   return results;
 }
 `

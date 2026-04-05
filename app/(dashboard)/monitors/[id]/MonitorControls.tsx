@@ -26,7 +26,18 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
 
   function startPolling() {
     setElapsed(0)
-    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+    timerRef.current = setInterval(() => {
+      setElapsed(e => {
+        // Timeout after 90s — Playwright can take a bit longer than Cheerio
+        if (e >= 90) {
+          clearTimers()
+          setRunState('failed')
+          setRunError('Scan timed out — try again')
+          setTimeout(() => { setRunState('idle'); setRunError('') }, 8000)
+        }
+        return e + 1
+      })
+    }, 1000)
 
     pollRef.current = setInterval(async () => {
       try {
@@ -46,7 +57,6 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
           setRunError('Scan failed — try again')
           setTimeout(() => { setRunState('idle'); setRunError('') }, 8000)
         }
-        // still 'running' → keep polling
       } catch {
         // network blip, keep polling
       }
@@ -71,6 +81,20 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       setTimeout(() => { setRunState('idle'); setRunError('') }, 10000)
     }
   }
+
+  // On mount: if there's already a running scan in the DB, resume polling
+  useEffect(() => {
+    fetch(`/api/monitors/${monitor.id}/run-status`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'running') {
+          setRunState('running')
+          startPolling()
+        }
+      })
+      .catch(() => null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monitor.id])
 
   // Cleanup on unmount
   useEffect(() => () => clearTimers(), [])
