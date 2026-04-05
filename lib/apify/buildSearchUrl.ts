@@ -81,11 +81,22 @@ export function buildSearchUrl(monitor: Monitor): string {
     params.set('beds', monitor.bedrooms.join(','))
   }
 
-  // Amenities
+  // Amenities (legacy boolean fields)
   if (monitor.no_fee) params.set('no_fee', '1')
   if (monitor.pet_friendly) params.set('pet_policy', 'allowed')
   if (monitor.laundry_in_unit) params.set('laundry', 'in_unit')
   else if (monitor.laundry_in_building) params.set('laundry', 'in_building')
+
+  // Extended amenities array
+  const amenities = monitor.amenities ?? []
+  if (amenities.includes('doorman')) params.set('doorman', '1')
+  if (amenities.includes('elevator')) params.set('elevator', '1')
+  if (amenities.includes('gym')) params.set('gym', '1')
+  if (amenities.includes('outdoor_space')) params.set('outdoor_space', '1')
+  if (amenities.includes('private_outdoor')) params.set('private_outdoor_space', '1')
+  if (amenities.includes('dishwasher')) params.set('dishwasher', '1')
+  if (amenities.includes('furnished')) params.set('furnished', '1')
+  if (amenities.includes('parking')) params.set('parking', '1')
 
   // Sort by newest
   params.set('sort_by', 'listed_desc')

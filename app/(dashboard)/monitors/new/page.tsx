@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const NYC_NEIGHBORHOODS = [
-  // Manhattan
   { value: 'upper-west-side', label: 'Upper West Side', borough: 'Manhattan' },
   { value: 'upper-east-side', label: 'Upper East Side', borough: 'Manhattan' },
   { value: 'harlem', label: 'Harlem', borough: 'Manhattan' },
@@ -23,7 +22,8 @@ const NYC_NEIGHBORHOODS = [
   { value: 'lower-east-side', label: 'Lower East Side', borough: 'Manhattan' },
   { value: 'east-village', label: 'East Village', borough: 'Manhattan' },
   { value: 'nolita', label: 'Nolita', borough: 'Manhattan' },
-  // Brooklyn
+  { value: 'kips-bay', label: 'Kips Bay', borough: 'Manhattan' },
+  { value: 'morningside-heights', label: 'Morningside Heights', borough: 'Manhattan' },
   { value: 'williamsburg', label: 'Williamsburg', borough: 'Brooklyn' },
   { value: 'greenpoint', label: 'Greenpoint', borough: 'Brooklyn' },
   { value: 'park-slope', label: 'Park Slope', borough: 'Brooklyn' },
@@ -35,11 +35,10 @@ const NYC_NEIGHBORHOODS = [
   { value: 'clinton-hill', label: 'Clinton Hill', borough: 'Brooklyn' },
   { value: 'prospect-heights', label: 'Prospect Heights', borough: 'Brooklyn' },
   { value: 'crown-heights', label: 'Crown Heights', borough: 'Brooklyn' },
-  { value: 'bedford-stuyvesant', label: 'Bedford-Stuyvesant', borough: 'Brooklyn' },
+  { value: 'bedford-stuyvesant', label: 'Bed-Stuy', borough: 'Brooklyn' },
   { value: 'bushwick', label: 'Bushwick', borough: 'Brooklyn' },
   { value: 'sunset-park', label: 'Sunset Park', borough: 'Brooklyn' },
   { value: 'bay-ridge', label: 'Bay Ridge', borough: 'Brooklyn' },
-  // Queens
   { value: 'astoria', label: 'Astoria', borough: 'Queens' },
   { value: 'long-island-city', label: 'Long Island City', borough: 'Queens' },
   { value: 'sunnyside', label: 'Sunnyside', borough: 'Queens' },
@@ -55,6 +54,36 @@ const BEDROOMS = [
   { value: 4, label: '4+ BR' },
 ]
 
+const AMENITIES = [
+  { value: 'no_fee', label: 'No broker fee' },
+  { value: 'pets_ok', label: 'Pet friendly' },
+  { value: 'laundry_in_unit', label: 'Laundry in unit' },
+  { value: 'laundry_in_building', label: 'Laundry in building' },
+  { value: 'doorman', label: 'Doorman' },
+  { value: 'elevator', label: 'Elevator' },
+  { value: 'gym', label: 'Gym' },
+  { value: 'outdoor_space', label: 'Outdoor space' },
+  { value: 'private_outdoor', label: 'Private outdoor' },
+  { value: 'dishwasher', label: 'Dishwasher' },
+  { value: 'furnished', label: 'Furnished' },
+  { value: 'parking', label: 'Parking' },
+]
+
+const FREE_INTERVALS = [
+  { value: 1440, label: 'Daily' },
+  { value: 720, label: 'Twice daily' },
+  { value: 360, label: 'Every 6 hours' },
+]
+
+const PRO_INTERVALS = [
+  { value: 10, label: 'Every 10 min' },
+  { value: 15, label: 'Every 15 min' },
+  { value: 30, label: 'Every 30 min' },
+  { value: 60, label: 'Every hour' },
+  { value: 180, label: 'Every 3 hours' },
+  { value: 360, label: 'Every 6 hours' },
+]
+
 export default function NewMonitorPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -65,10 +94,10 @@ export default function NewMonitorPage() {
   const [selectedBedrooms, setSelectedBedrooms] = useState<number[]>([])
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
-  const [noFee, setNoFee] = useState(false)
-  const [petFriendly, setPetFriendly] = useState(false)
-  const [laundryInUnit, setLaundryInUnit] = useState(false)
-  const [laundryInBuilding, setLaundryInBuilding] = useState(false)
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+  const [scanInterval, setScanInterval] = useState(1440)
+  // TODO: detect isPro from session for pro intervals
+  const isPro = false
 
   function toggleNeighborhood(value: string) {
     setSelectedNeighborhoods(prev =>
@@ -82,33 +111,42 @@ export default function NewMonitorPage() {
     )
   }
 
+  function toggleAmenity(value: string) {
+    setSelectedAmenities(prev =>
+      prev.includes(value) ? prev.filter(a => a !== value) : [...prev, value]
+    )
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (selectedNeighborhoods.length === 0) {
-      setError('Select at least one neighborhood.')
-      return
-    }
-    if (!maxPrice) {
-      setError('Set a maximum rent.')
-      return
-    }
+    if (selectedNeighborhoods.length === 0) { setError('Select at least one neighborhood.'); return }
+    if (!maxPrice) { setError('Set a maximum rent.'); return }
 
     setLoading(true)
     setError('')
+
+    // Map amenity values to legacy boolean fields + amenities array
+    const no_fee = selectedAmenities.includes('no_fee')
+    const pet_friendly = selectedAmenities.includes('pets_ok')
+    const laundry_in_unit = selectedAmenities.includes('laundry_in_unit')
+    const laundry_in_building = selectedAmenities.includes('laundry_in_building')
+    const amenities = selectedAmenities.filter(a => !['no_fee', 'pets_ok', 'laundry_in_unit', 'laundry_in_building'].includes(a))
 
     const res = await fetch('/api/monitors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: name || `${selectedNeighborhoods[0]} monitor`,
+        name: name || `${selectedNeighborhoods[0].replace(/-/g, ' ')} monitor`,
         neighborhoods: selectedNeighborhoods,
         bedrooms: selectedBedrooms.length > 0 ? selectedBedrooms : null,
         min_price: minPrice ? parseInt(minPrice) : null,
         max_price: parseInt(maxPrice),
-        no_fee: noFee,
-        pet_friendly: petFriendly,
-        laundry_in_unit: laundryInUnit,
-        laundry_in_building: laundryInBuilding,
+        no_fee,
+        pet_friendly,
+        laundry_in_unit,
+        laundry_in_building,
+        amenities,
+        scan_interval: scanInterval,
       }),
     })
 
@@ -117,22 +155,21 @@ export default function NewMonitorPage() {
       setError(data.error ?? 'Something went wrong.')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      router.push('/monitors')
     }
   }
 
   const boroughs = Array.from(new Set(NYC_NEIGHBORHOODS.map(n => n.borough)))
+  const intervals = isPro ? PRO_INTERVALS : FREE_INTERVALS
 
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
         <h1 className="font-serif text-3xl text-[#2C2420]">New monitor</h1>
-        <p className="text-sm text-[#6B5E52] mt-1">
-          Set your criteria and we'll alert you when a match appears.
-        </p>
+        <p className="text-sm text-[#6B5E52] mt-1">Set your criteria and we&apos;ll alert you when a match appears.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Name */}
         <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
           <label className="block text-sm font-medium text-[#2C2420] mb-3">Monitor name</label>
@@ -153,16 +190,8 @@ export default function NewMonitorPage() {
               <div className="text-xs font-medium text-[#6B5E52] mb-2">{borough}</div>
               <div className="flex flex-wrap gap-2">
                 {NYC_NEIGHBORHOODS.filter(n => n.borough === borough).map(n => (
-                  <button
-                    key={n.value}
-                    type="button"
-                    onClick={() => toggleNeighborhood(n.value)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                      selectedNeighborhoods.includes(n.value)
-                        ? 'bg-[#C4703A] border-[#C4703A] text-white'
-                        : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'
-                    }`}
-                  >
+                  <button key={n.value} type="button" onClick={() => toggleNeighborhood(n.value)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedNeighborhoods.includes(n.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
                     {n.label}
                   </button>
                 ))}
@@ -177,44 +206,24 @@ export default function NewMonitorPage() {
             <label className="block text-sm font-medium text-[#2C2420] mb-3">Bedrooms</label>
             <div className="flex flex-wrap gap-2">
               {BEDROOMS.map(b => (
-                <button
-                  key={b.value}
-                  type="button"
-                  onClick={() => toggleBedroom(b.value)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                    selectedBedrooms.includes(b.value)
-                      ? 'bg-[#C4703A] border-[#C4703A] text-white'
-                      : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'
-                  }`}
-                >
+                <button key={b.value} type="button" onClick={() => toggleBedroom(b.value)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedBedrooms.includes(b.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
                   {b.label}
                 </button>
               ))}
             </div>
             <p className="text-xs text-[#6B5E52] mt-2">Leave empty to match any</p>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-[#6B5E52] mb-1.5">Min rent (optional)</label>
-              <input
-                type="number"
-                value={minPrice}
-                onChange={e => setMinPrice(e.target.value)}
-                placeholder="1000"
-                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]"
-              />
+              <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="1000"
+                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]" />
             </div>
             <div>
               <label className="block text-xs font-medium text-[#6B5E52] mb-1.5">Max rent *</label>
-              <input
-                type="number"
-                value={maxPrice}
-                onChange={e => setMaxPrice(e.target.value)}
-                placeholder="2500"
-                required
-                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]"
-              />
+              <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="2500" required
+                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]" />
             </div>
           </div>
         </div>
@@ -222,48 +231,41 @@ export default function NewMonitorPage() {
         {/* Amenities */}
         <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
           <label className="block text-sm font-medium text-[#2C2420] mb-4">Amenities</label>
-          <div className="space-y-3">
-            {[
-              { key: 'noFee', label: 'No broker fee', value: noFee, set: setNoFee },
-              { key: 'petFriendly', label: 'Pet friendly', value: petFriendly, set: setPetFriendly },
-              { key: 'laundryInUnit', label: 'Laundry in unit', value: laundryInUnit, set: setLaundryInUnit },
-              { key: 'laundryInBuilding', label: 'Laundry in building', value: laundryInBuilding, set: setLaundryInBuilding },
-            ].map(item => (
-              <label key={item.key} className="flex items-center gap-3 cursor-pointer">
-                <button
-                  type="button"
-                  onClick={() => item.set(!item.value)}
-                  className={`w-10 h-5.5 rounded-full transition-colors relative ${item.value ? 'bg-[#C4703A]' : 'bg-[#E8E0D5]'}`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${item.value ? 'translate-x-4.5' : ''}`}
-                  />
-                </button>
-                <span className="text-sm text-[#2C2420]">{item.label}</span>
-              </label>
+          <div className="flex flex-wrap gap-2">
+            {AMENITIES.map(a => (
+              <button key={a.value} type="button" onClick={() => toggleAmenity(a.value)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedAmenities.includes(a.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-[#6B5E52] mt-3">Leave empty to match any</p>
+        </div>
+
+        {/* Scan frequency */}
+        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
+          <label className="block text-sm font-medium text-[#2C2420] mb-1">Scan frequency</label>
+          {!isPro && <p className="text-xs text-[#6B5E52] mb-3">Upgrade to Pro for scans as fast as every 10 minutes.</p>}
+          <div className="flex flex-wrap gap-2">
+            {intervals.map(i => (
+              <button key={i.value} type="button" onClick={() => setScanInterval(i.value)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${scanInterval === i.value ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+                {i.label}
+              </button>
             ))}
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
         )}
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-[#C4703A] text-white px-8 py-2.5 rounded-full text-sm font-medium hover:bg-[#A85C2E] transition-colors disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading}
+            className="bg-[#C4703A] text-white px-8 py-2.5 rounded-full text-sm font-medium hover:bg-[#A85C2E] transition-colors disabled:opacity-50">
             {loading ? 'Creating…' : 'Create monitor'}
           </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-sm text-[#6B5E52] hover:text-[#2C2420] transition-colors"
-          >
+          <button type="button" onClick={() => router.back()} className="text-sm text-[#6B5E52] hover:text-[#2C2420] transition-colors">
             Cancel
           </button>
         </div>

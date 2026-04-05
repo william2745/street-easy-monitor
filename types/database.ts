@@ -31,6 +31,8 @@ export type Monitor = {
   pet_friendly: boolean
   laundry_in_unit: boolean
   laundry_in_building: boolean
+  amenities: string[]
+  scan_interval: number
   last_run_at: string | null
   created_at: string
   updated_at: string

@@ -51,15 +51,15 @@ export default async function BillingPage() {
         )}
       </div>
 
-      <BillingActions isPro={isPro} />
-
-      {!isPro && (
-        <div className="mt-6 bg-[#2C2420] rounded-2xl p-6 text-white">
+      {isPro ? (
+        <BillingActions isPro={isPro} />
+      ) : (
+        <div className="bg-[#2C2420] rounded-2xl p-6 text-white">
           <div className="text-sm text-[#C4703A] font-medium mb-2">Upgrade to Pro</div>
           <div className="font-serif text-3xl mb-4">$9.99<span className="text-base font-sans text-[#E8E0D5]">/mo</span></div>
           <ul className="text-sm text-[#E8E0D5] space-y-2 mb-6">
             <li>Unlimited monitors</li>
-            <li>Scans every 15 minutes</li>
+            <li>Scans as fast as every 10 minutes</li>
             <li>Instant email alerts the moment a match appears</li>
           </ul>
           <BillingActions isPro={false} showUpgrade />

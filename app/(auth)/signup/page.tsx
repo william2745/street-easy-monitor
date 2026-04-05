@@ -18,15 +18,29 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
 
-    if (error) {
-      setError(error.message)
+    if (signUpError) {
+      // Supabase rate limit message is confusing — simplify it
+      if (signUpError.message.toLowerCase().includes('security purposes') ||
+          signUpError.message.toLowerCase().includes('after')) {
+        setError('Please wait a moment before trying again.')
+      } else {
+        setError(signUpError.message)
+      }
       setLoading(false)
+      return
+    }
+
+    // Auto sign-in after signup
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError) {
+      // Account created but couldn't auto-login — send to login
+      router.push('/login?created=1')
     } else {
       router.push('/dashboard')
     }
