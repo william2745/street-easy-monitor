@@ -10,3 +10,9 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
 }
+
+@keyframes pulse-bar {
+  0%   { transform: translateX(-100%); width: 60%; }
+  50%  { transform: translateX(80%);   width: 60%; }
+  100% { transform: translateX(-100%); width: 60%; }
+}
