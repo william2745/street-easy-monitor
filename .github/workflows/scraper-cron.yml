@@ -1,0 +1,16 @@
+name: Run monitor scans
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  run-monitors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scraper
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://street-easy-monitor.vercel.app/api/cron/run-monitors
