@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Monitor } from '@/types/database'
 
 export default function MonitorControls({ monitor }: { monitor: Monitor }) {
@@ -46,6 +47,12 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       >
         {scanning ? 'Scanning…' : scanned ? 'Queued ✓' : 'Check now'}
       </button>
+      <Link
+        href={`/monitors/${monitor.id}/edit`}
+        className="text-sm border border-[#E8E0D5] text-[#6B5E52] px-4 py-2 rounded-full hover:bg-[#F0EBE1] transition-colors"
+      >
+        Edit
+      </Link>
       <button
         onClick={toggleActive}
         disabled={loading}
