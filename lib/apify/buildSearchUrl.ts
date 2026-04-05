@@ -98,12 +98,7 @@ export function buildSearchUrl(monitor: Monitor, scanWindowMinutes?: number): st
   if (amenities.includes('furnished')) params.set('furnished', '1')
   if (amenities.includes('parking')) params.set('parking', '1')
 
-  // Scope to the scan window — StreetEasy supports day granularity (min 1 day)
-  const windowMinutes = scanWindowMinutes ?? monitor.scan_interval ?? 1440
-  const listedDays = Math.max(1, Math.ceil(windowMinutes / 1440))
-  params.set('listed', String(listedDays))
-
-  // Sort by newest
+  // Sort by newest first
   params.set('sort_by', 'listed_desc')
 
   const queryString = params.toString()

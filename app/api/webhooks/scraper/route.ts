@@ -166,6 +166,7 @@ export async function POST(req: NextRequest) {
 }
 
 function extractListingId(url: string): string | null {
-  const match = url.match(/\/(\d{6,})\/?/)
+  // Matches numeric IDs (/rental/12345678) and alphanumeric StreetEasy IDs
+  const match = url.match(/\/rental\/([A-Z0-9]{6,})\/?/i) || url.match(/\/(\d{6,})\/?/)
   return match ? match[1] : null
 }
