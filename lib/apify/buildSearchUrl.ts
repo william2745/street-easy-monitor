@@ -59,7 +59,7 @@ const NYC_NEIGHBORHOOD_SLUGS: Record<string, string> = {
   'fordham': 'fordham',
 }
 
-export function buildSearchUrl(monitor: Monitor): string {
+export function buildSearchUrl(monitor: Monitor, scanWindowMinutes?: number): string {
   const base = 'https://streeteasy.com/for-rent'
 
   // Build neighborhood path segment
@@ -97,6 +97,11 @@ export function buildSearchUrl(monitor: Monitor): string {
   if (amenities.includes('dishwasher')) params.set('dishwasher', '1')
   if (amenities.includes('furnished')) params.set('furnished', '1')
   if (amenities.includes('parking')) params.set('parking', '1')
+
+  // Scope to the scan window — StreetEasy supports day granularity (min 1 day)
+  const windowMinutes = scanWindowMinutes ?? monitor.scan_interval ?? 1440
+  const listedDays = Math.max(1, Math.ceil(windowMinutes / 1440))
+  params.set('listed', String(listedDays))
 
   // Sort by newest
   params.set('sort_by', 'listed_desc')

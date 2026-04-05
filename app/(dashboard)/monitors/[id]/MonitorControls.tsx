@@ -9,15 +9,21 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [scanning, setScanning] = useState(false)
-  const [scanned, setScanned] = useState(false)
+  const [runStatus, setRunStatus] = useState<'idle' | 'queued' | 'error'>('idle')
 
   async function runNow() {
     setScanning(true)
-    await fetch(`/api/monitors/${monitor.id}/run-now`, { method: 'POST' })
+    setRunStatus('idle')
+    const res = await fetch(`/api/monitors/${monitor.id}/run-now`, { method: 'POST' })
     setScanning(false)
-    setScanned(true)
-    setTimeout(() => setScanned(false), 5000)
-    router.refresh()
+    if (res.ok) {
+      setRunStatus('queued')
+      router.refresh()
+      setTimeout(() => setRunStatus('idle'), 6000)
+    } else {
+      setRunStatus('error')
+      setTimeout(() => setRunStatus('idle'), 6000)
+    }
   }
 
   async function toggleActive() {
@@ -43,9 +49,15 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       <button
         onClick={runNow}
         disabled={scanning}
-        className="text-sm bg-[#F5E8DC] text-[#C4703A] px-4 py-2 rounded-full hover:bg-[#EDD9C6] transition-colors disabled:opacity-50"
+        className={`text-sm px-4 py-2 rounded-full transition-colors disabled:opacity-50 ${
+          runStatus === 'error'
+            ? 'bg-red-100 text-red-600 border border-red-200'
+            : runStatus === 'queued'
+            ? 'bg-[#E8F5E9] text-green-700'
+            : 'bg-[#F5E8DC] text-[#C4703A] hover:bg-[#EDD9C6]'
+        }`}
       >
-        {scanning ? 'Scanning…' : scanned ? 'Queued ✓' : 'Check now'}
+        {scanning ? 'Triggering…' : runStatus === 'queued' ? 'Scan queued ✓' : runStatus === 'error' ? 'Failed — retry?' : 'Check now'}
       </button>
       <Link
         href={`/monitors/${monitor.id}/edit`}

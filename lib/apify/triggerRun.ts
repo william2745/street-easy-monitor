@@ -4,8 +4,8 @@ import { buildSearchUrl } from './buildSearchUrl'
 const APIFY_API_BASE = 'https://api.apify.com/v2'
 const ACTOR_ID = process.env.SCRAPER_ACTOR_ID ?? 'memo23~apify-streeteasy-cheerio'
 
-export async function triggerMonitorRun(monitor: Monitor): Promise<string> {
-  const searchUrl = buildSearchUrl(monitor)
+export async function triggerMonitorRun(monitor: Monitor, scanWindowMinutes?: number): Promise<string> {
+  const searchUrl = buildSearchUrl(monitor, scanWindowMinutes ?? monitor.scan_interval)
   const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/scraper?secret=${process.env.SCRAPER_WEBHOOK_SECRET}`
 
   const response = await fetch(
