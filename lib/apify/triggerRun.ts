@@ -6,70 +6,77 @@ const APIFY_API_BASE = 'https://api.apify.com/v2'
 // client-side listing results are visible. No rental required.
 const ACTOR_ID = 'apify~playwright-scraper'
 
-// Page function — dumps __NEXT_DATA__ structure so we know where listings live,
-// then extracts them. Block images/CSS to load faster.
+// Page function — waits for StreetEasy listings to load then extracts them.
+// Residential proxies ensure the page loads without PerimeterX blocking.
 const STREETEASY_PAGE_FUNCTION = /* js */ `
 async function pageFunction(context) {
   const { page, log } = context;
 
-  // Block images, fonts, CSS — cuts load time significantly
-  await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf,otf,css}', function(r) {
-    r.abort();
-  });
+  // Wait for listing cards or network idle
+  await Promise.race([
+    page.waitForSelector('li[class*="listing"], [data-id], article[class*="result"]', { timeout: 20000 }),
+    page.waitForLoadState('networkidle', { timeout: 20000 }),
+  ]).catch(function() { log.warning('wait timeout, extracting anyway'); });
 
-  // Wait for content — shorter timeout
-  await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(function() {});
-
-  const result = await page.evaluate(function() {
-    var el = document.getElementById('__NEXT_DATA__');
-    if (!el) return { error: 'no __NEXT_DATA__', listings: [] };
-
-    var data;
-    try { data = JSON.parse(el.textContent); } catch(e) { return { error: 'parse error', listings: [] }; }
-
-    var pp = data && data.props && data.props.pageProps;
-    if (!pp) return { error: 'no pageProps', listings: [] };
-
-    // Log structure so we know what keys exist and their sizes
-    var keys = Object.keys(pp).map(function(k) {
-      return k + ':' + JSON.stringify(pp[k]).length;
-    });
-
-    // Walk ALL arrays in pageProps looking for objects with id+price (listing shape)
+  const listings = await page.evaluate(function() {
     var found = [];
-    function walk(obj, depth) {
-      if (depth > 4 || !obj || typeof obj !== 'object') return;
-      if (Array.isArray(obj)) {
-        if (obj.length > 0 && obj[0] && (obj[0].id || obj[0].listingId) && (obj[0].price != null || obj[0].address)) {
-          obj.forEach(function(l) {
-            var id = l.id || l.listingId || l.listing_id;
-            if (!id) return;
-            found.push({
-              listingId: String(id),
-              url: l.url || ('https://streeteasy.com/rental/' + id),
-              address: l.full_address || l.address || l.streetAddress || null,
-              neighborhood: l.areaName || l.neighborhood || null,
-              bedrooms: l.bedrooms != null ? l.bedrooms : (l.beds != null ? l.beds : null),
-              price: l.price || l.listingPrice || l.rent || null,
-              noFee: !!(l.noFee || l.no_fee),
-              petFriendly: !!(l.petFriendly || l.pets_allowed || l.petsAllowed),
-              hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
-            });
-          });
-        }
-        obj.forEach(function(item) { walk(item, depth + 1); });
-      } else {
-        Object.values(obj).forEach(function(v) { walk(v, depth + 1); });
-      }
-    }
-    walk(pp, 0);
 
-    return { keys: keys.join(' | '), listingCount: found.length, listings: found };
+    // 1. Walk __NEXT_DATA__ — deep search for arrays that look like listings
+    var el = document.getElementById('__NEXT_DATA__');
+    if (el) {
+      try {
+        var pp = JSON.parse(el.textContent).props.pageProps;
+        function walk(obj, depth) {
+          if (depth > 5 || !obj || typeof obj !== 'object') return;
+          if (Array.isArray(obj)) {
+            if (obj.length > 0 && obj[0] && (obj[0].id || obj[0].listingId) && obj[0].price != null) {
+              obj.forEach(function(l) {
+                var id = l.id || l.listingId || l.listing_id;
+                if (!id) return;
+                found.push({
+                  listingId: String(id),
+                  url: l.url || ('https://streeteasy.com/rental/' + id),
+                  address: l.full_address || l.address || l.streetAddress || null,
+                  neighborhood: l.areaName || l.neighborhood || null,
+                  bedrooms: l.bedrooms != null ? l.bedrooms : (l.beds != null ? l.beds : null),
+                  price: l.price || l.listingPrice || l.rent || null,
+                  noFee: !!(l.noFee || l.no_fee),
+                  petFriendly: !!(l.petFriendly || l.pets_allowed || l.petsAllowed),
+                  hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
+                });
+              });
+            }
+            obj.forEach(function(i) { walk(i, depth + 1); });
+          } else {
+            Object.values(obj).forEach(function(v) { walk(v, depth + 1); });
+          }
+        }
+        walk(pp, 0);
+      } catch(e) {}
+    }
+
+    // 2. DOM fallback — rendered listing cards
+    if (found.length === 0) {
+      document.querySelectorAll('li[class*="listing"], article[class*="result"], [data-id]').forEach(function(card) {
+        var lid = card.getAttribute('data-id') || card.getAttribute('data-listing-id');
+        var link = (card.querySelector('a[href*="/rental/"]') || card.querySelector('a')||{}).href;
+        if (!link && !lid) return;
+        var priceEl = card.querySelector('[class*="price"]');
+        var addrEl = card.querySelector('[class*="address"]');
+        found.push({
+          listingId: lid || null,
+          url: link || ('https://streeteasy.com/rental/' + lid),
+          address: addrEl ? addrEl.textContent.trim() : null,
+          price: priceEl ? parseInt(priceEl.textContent.replace(/\\D/g,''),10)||null : null,
+        });
+      });
+    }
+
+    return found;
   });
 
-  log.info('__NEXT_DATA__ keys: ' + (result.keys || result.error));
-  log.info('Found ' + (result.listings || []).length + ' listings');
-  return result.listings || [];
+  log.info('Extracted ' + listings.length + ' listings from ' + page.url());
+  return listings;
 }
 `
 
@@ -85,7 +92,16 @@ export async function triggerMonitorRun(monitor: Monitor, scanWindowMinutes?: nu
       body: JSON.stringify({
         startUrls: [{ url: searchUrl }],
         pageFunction: STREETEASY_PAGE_FUNCTION,
-        proxyConfiguration: { useApifyProxy: true },
+        // Residential proxies bypass StreetEasy's PerimeterX bot detection.
+        // Covered by Apify's $5/month free platform credits.
+        proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+        // Use real Chrome (harder to detect than Chromium) + stealth args
+        useChrome: true,
+        launchContext: {
+          launchOptions: {
+            args: ['--disable-blink-features=AutomationControlled'],
+          },
+        },
         maxRequestsPerCrawl: 1,
         maxConcurrency: 1,
         webhooks: [
