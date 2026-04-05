@@ -1,0 +1,24 @@
+-- Enable pg_cron and pg_net extensions (must be done via Supabase dashboard or CLI)
+-- create extension if not exists pg_cron;
+-- create extension if not exists pg_net;
+
+-- Schedule the scraper trigger Edge Function every 15 minutes
+-- Run this after deploying the Edge Function and setting SUPABASE_URL / ANON_KEY
+--
+-- select cron.schedule(
+--   'trigger-all-monitor-runs',
+--   '*/15 * * * *',
+--   $$
+--   select net.http_post(
+--     url := 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/trigger-scraper-runs',
+--     headers := jsonb_build_object(
+--       'Authorization', 'Bearer YOUR_ANON_KEY',
+--       'Content-Type', 'application/json'
+--     ),
+--     body := '{}'::jsonb
+--   )
+--   $$
+-- );
+--
+-- Replace YOUR_PROJECT_REF and YOUR_ANON_KEY with your actual values.
+-- This can be run in the Supabase SQL editor.
