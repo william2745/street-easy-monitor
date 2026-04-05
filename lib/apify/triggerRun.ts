@@ -12,71 +12,63 @@ const STREETEASY_PAGE_FUNCTION = /* js */ `
 async function pageFunction(context) {
   const { page, log } = context;
 
-  // Wait for listing cards or network idle
-  await Promise.race([
-    page.waitForSelector('li[class*="listing"], [data-id], article[class*="result"]', { timeout: 20000 }),
-    page.waitForLoadState('networkidle', { timeout: 20000 }),
-  ]).catch(function() { log.warning('wait timeout, extracting anyway'); });
+  // Wait for network to settle
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(function() {});
 
-  const listings = await page.evaluate(function() {
-    var found = [];
+  // Dump page state so we can see exactly what StreetEasy serves
+  const debug = await page.evaluate(function() {
+    var title = document.title;
+    var url = window.location.href;
 
-    // 1. Walk __NEXT_DATA__ — deep search for arrays that look like listings
+    // All element counts for common listing selectors
+    var selectors = [
+      'li[class*="listing"]', 'li[class*="SearchResult"]', '[data-id]',
+      '[data-listing-id]', 'article', 'li.item', '[class*="unitCard"]',
+      '[class*="listingCard"]', '[class*="SearchResultCard"]', 'ul li a[href*="/rental/"]'
+    ];
+    var counts = {};
+    selectors.forEach(function(s) {
+      try { counts[s] = document.querySelectorAll(s).length; } catch(e) { counts[s] = -1; }
+    });
+
+    // __NEXT_DATA__ keys
+    var nextKeys = 'none';
+    var nextSample = '';
     var el = document.getElementById('__NEXT_DATA__');
     if (el) {
       try {
-        var pp = JSON.parse(el.textContent).props.pageProps;
-        function walk(obj, depth) {
-          if (depth > 5 || !obj || typeof obj !== 'object') return;
-          if (Array.isArray(obj)) {
-            if (obj.length > 0 && obj[0] && (obj[0].id || obj[0].listingId) && obj[0].price != null) {
-              obj.forEach(function(l) {
-                var id = l.id || l.listingId || l.listing_id;
-                if (!id) return;
-                found.push({
-                  listingId: String(id),
-                  url: l.url || ('https://streeteasy.com/rental/' + id),
-                  address: l.full_address || l.address || l.streetAddress || null,
-                  neighborhood: l.areaName || l.neighborhood || null,
-                  bedrooms: l.bedrooms != null ? l.bedrooms : (l.beds != null ? l.beds : null),
-                  price: l.price || l.listingPrice || l.rent || null,
-                  noFee: !!(l.noFee || l.no_fee),
-                  petFriendly: !!(l.petFriendly || l.pets_allowed || l.petsAllowed),
-                  hasLaundry: !!(l.hasLaundry || l.laundry_in_unit || l.laundry_in_building),
-                });
-              });
-            }
-            obj.forEach(function(i) { walk(i, depth + 1); });
-          } else {
-            Object.values(obj).forEach(function(v) { walk(v, depth + 1); });
-          }
+        var nd = JSON.parse(el.textContent);
+        var pp = nd.props && nd.props.pageProps;
+        if (pp) {
+          nextKeys = Object.keys(pp).map(function(k) {
+            var size = JSON.stringify(pp[k]).length;
+            return k + '(' + size + ')';
+          }).join(', ');
+          // Sample first large key
+          var big = Object.entries(pp).sort(function(a,b){ return JSON.stringify(b[1]).length - JSON.stringify(a[1]).length; })[0];
+          if (big) nextSample = big[0] + ':' + JSON.stringify(big[1]).slice(0,300);
         }
-        walk(pp, 0);
-      } catch(e) {}
+      } catch(e) { nextKeys = 'parse error: ' + e.message; }
     }
 
-    // 2. DOM fallback — rendered listing cards
-    if (found.length === 0) {
-      document.querySelectorAll('li[class*="listing"], article[class*="result"], [data-id]').forEach(function(card) {
-        var lid = card.getAttribute('data-id') || card.getAttribute('data-listing-id');
-        var link = (card.querySelector('a[href*="/rental/"]') || card.querySelector('a')||{}).href;
-        if (!link && !lid) return;
-        var priceEl = card.querySelector('[class*="price"]');
-        var addrEl = card.querySelector('[class*="address"]');
-        found.push({
-          listingId: lid || null,
-          url: link || ('https://streeteasy.com/rental/' + lid),
-          address: addrEl ? addrEl.textContent.trim() : null,
-          price: priceEl ? parseInt(priceEl.textContent.replace(/\\D/g,''),10)||null : null,
-        });
-      });
-    }
+    // First 5 rental links on page
+    var links = [];
+    document.querySelectorAll('a[href*="/rental/"]').forEach(function(a) {
+      if (links.length < 5) links.push(a.href);
+    });
 
-    return found;
+    return { title: title, url: url, selectors: counts, nextKeys: nextKeys, nextSample: nextSample, rentalLinks: links };
   });
 
-  log.info('Extracted ' + listings.length + ' listings from ' + page.url());
-  return listings;
+  log.info('PAGE TITLE: ' + debug.title);
+  log.info('PAGE URL: ' + debug.url);
+  log.info('NEXT_DATA keys: ' + debug.nextKeys);
+  log.info('NEXT_DATA sample: ' + debug.nextSample);
+  log.info('SELECTOR COUNTS: ' + JSON.stringify(debug.selectors));
+  log.info('RENTAL LINKS: ' + JSON.stringify(debug.rentalLinks));
+
+  // Return debug as single item so we can read it from the dataset
+  return [debug];
 }
 `
 
