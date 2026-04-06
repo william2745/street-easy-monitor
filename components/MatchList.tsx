@@ -28,6 +28,18 @@ function toEasternDate(dateStr: string): string {
   })
 }
 
+/** Build a direct StreetEasy CDN image URL from the stored image_url */
+function directImgSrc(imageUrl: string | null): string | null {
+  if (!imageUrl) return null
+  // If already a full CDN URL, use it directly
+  if (imageUrl.startsWith('https://media.streeteasy.com')) return imageUrl
+  // If it's a bare key, build the URL
+  if (/^[a-f0-9]{20,}$/i.test(imageUrl)) {
+    return `https://media.streeteasy.com/6/${imageUrl}-ci/0/1/fill/400/300/center/1`
+  }
+  return imageUrl
+}
+
 /** Generate a warm-toned gradient based on the listing ID for visual variety */
 function placeholderGradient(listingId: string): string {
   const hash = listingId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -54,6 +66,7 @@ export default function MatchList({
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [bedroomFilter, setBedroomFilter] = useState<number | 'all'>('all')
   const [feeFilter, setFeeFilter] = useState<'all' | 'no_fee'>('all')
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set())
 
   const bedroomOptions = useMemo(() => {
     const set = new Set<number>()
@@ -120,7 +133,7 @@ export default function MatchList({
         </button>
         {hasListedAt && (
           <button onClick={() => toggleSort('listed_at')} className={sortBtnClass('listed_at')}>
-            Date listed{arrow('listed_at')}
+            Available{arrow('listed_at')}
           </button>
         )}
         <button onClick={() => toggleSort('price')} className={sortBtnClass('price')}>
@@ -161,6 +174,8 @@ export default function MatchList({
             ? new Date(match.found_at) >= new Date(newRunStart)
             : false
           const gradient = placeholderGradient(match.listing_id)
+          const imgSrc = directImgSrc(match.image_url)
+          const showRealImg = imgSrc && !imgErrors.has(match.id)
 
           return (
             <a
@@ -170,16 +185,29 @@ export default function MatchList({
               rel="noopener noreferrer"
               className="flex bg-white rounded-xl shadow-[0_1px_4px_rgba(44,36,32,0.08)] hover:shadow-[0_4px_16px_rgba(44,36,32,0.12)] transition-shadow group overflow-hidden"
             >
-              {/* Styled placeholder with price + bedroom badge */}
-              <div className={`relative w-32 sm:w-40 shrink-0 bg-gradient-to-br ${gradient} flex flex-col items-center justify-center gap-1.5 min-h-[110px]`}>
-                {match.price != null && (
-                  <span className="text-lg font-bold text-[#2C2420]/70">
-                    ${match.price.toLocaleString()}
-                  </span>
+              {/* Image with fallback to styled placeholder */}
+              <div className={`relative w-32 sm:w-40 shrink-0 min-h-[110px] bg-gradient-to-br ${gradient}`}>
+                {showRealImg ? (
+                  <img
+                    src={imgSrc}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={() => setImgErrors(prev => new Set(prev).add(match.id))}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                    {match.price != null && (
+                      <span className="text-lg font-bold text-[#2C2420]/70">
+                        ${match.price.toLocaleString()}
+                      </span>
+                    )}
+                    <span className="text-xs font-medium text-[#6B5E52]/70 bg-white/50 px-2 py-0.5 rounded-full">
+                      {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms} BR`) : '—'}
+                    </span>
+                  </div>
                 )}
-                <span className="text-xs font-medium text-[#6B5E52]/70 bg-white/50 px-2 py-0.5 rounded-full">
-                  {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms} BR`) : '—'}
-                </span>
                 {isNew && (
                   <span className="absolute top-2 left-2 text-xs bg-[#C4703A] text-white px-2 py-0.5 rounded-full font-medium shadow-sm">
                     NEW
@@ -213,7 +241,7 @@ export default function MatchList({
                   </div>
                   <div className="text-xs text-[#9B8E82] shrink-0 ml-3 text-right leading-relaxed">
                     {match.listed_at && (
-                      <div>Listed {toEasternDate(match.listed_at)}</div>
+                      <div>Available {toEasternDate(match.listed_at)}</div>
                     )}
                     <div>Found {toEastern(match.found_at)}</div>
                   </div>
