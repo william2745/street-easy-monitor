@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { triggerMonitorRun } from '@/lib/apify/triggerRun'
 
+export const maxDuration = 55 // wait for scraper to complete
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -25,12 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single()
 
   try {
-    const apifyRunId = await triggerMonitorRun(monitor)
-    await serviceSupabase
-      .from('scraper_runs')
-      .update({ apify_run_id: apifyRunId })
-      .eq('id', runRecord?.id)
-
+    await triggerMonitorRun(monitor, undefined, runRecord?.id)
     return NextResponse.json({ ok: true })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)

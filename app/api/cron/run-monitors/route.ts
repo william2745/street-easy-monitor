@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { triggerMonitorRun } from '@/lib/apify/triggerRun'
 
+export const maxDuration = 55
+
 // Called by Vercel Cron every 15 minutes
 export async function GET(req: NextRequest) {
   // Verify it's coming from Vercel Cron
@@ -24,6 +26,7 @@ export async function GET(req: NextRequest) {
 
   const triggered: string[] = []
   const skipped: string[] = []
+  const toRun: typeof monitors = []
 
   for (const monitor of monitors ?? []) {
     const sub = Array.isArray(monitor.subscriptions)
@@ -40,25 +43,26 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    try {
-      const { data: runRecord } = await supabase
-        .from('scraper_runs')
-        .insert({ monitor_id: monitor.id, status: 'running' })
-        .select()
-        .single()
-
-      const apifyRunId = await triggerMonitorRun(monitor)
-
-      await supabase
-        .from('scraper_runs')
-        .update({ apify_run_id: apifyRunId })
-        .eq('id', runRecord?.id)
-
-      triggered.push(monitor.id)
-    } catch (e) {
-      console.error(`Failed to trigger monitor ${monitor.id}:`, e)
-    }
+    toRun.push(monitor)
   }
+
+  // Run all eligible monitors in parallel
+  await Promise.allSettled(
+    toRun.map(async (monitor) => {
+      try {
+        const { data: runRecord } = await supabase
+          .from('scraper_runs')
+          .insert({ monitor_id: monitor.id, status: 'running' })
+          .select()
+          .single()
+
+        await triggerMonitorRun(monitor, undefined, runRecord?.id)
+        triggered.push(monitor.id)
+      } catch (e) {
+        console.error(`Failed to trigger monitor ${monitor.id}:`, e)
+      }
+    })
+  )
 
   return NextResponse.json({ triggered: triggered.length, skipped: skipped.length })
 }
