@@ -30,7 +30,8 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
   const { id } = await params
   const supabase = await createClient()
   const serviceSupabase = createServiceClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getUser()
+  const user = data?.user
 
   const { data: monitor } = await supabase.from('monitors').select('*').eq('id', id).eq('user_id', user!.id).single()
   if (!monitor) notFound()

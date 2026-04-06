@@ -5,7 +5,13 @@ import SidebarNav from './SidebarNav'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data?.user ?? null
+  } catch {
+    // malformed/stale cookie — fall through to redirect
+  }
   if (!user) redirect('/login')
 
   async function signOut() {

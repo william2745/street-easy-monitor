@@ -30,7 +30,8 @@ function nextScan(m: Monitor): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getUser()
+  const user = data?.user
 
   const [{ data: monitors }, { data: matches }] = await Promise.all([
     supabase.from('monitors').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }),

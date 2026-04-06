@@ -29,7 +29,8 @@ function relativeTime(dateStr: string): string {
 
 export default async function MonitorsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getUser()
+  const user = data?.user
 
   const { data: monitors } = await supabase
     .from('monitors')

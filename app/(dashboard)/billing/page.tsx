@@ -3,7 +3,8 @@ import BillingActions from './BillingActions'
 
 export default async function BillingPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data } = await supabase.auth.getUser()
+  const user = data?.user
   const { data: sub } = await supabase.from('subscriptions').select('*').eq('user_id', user!.id).eq('status', 'active').single()
   const isPro = sub?.plan === 'pro'
 

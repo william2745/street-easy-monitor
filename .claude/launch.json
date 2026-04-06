@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "/Users/williamreed/.nvm/versions/node/v24.13.0/bin/node",
+      "runtimeArgs": ["node_modules/.bin/next", "dev", "--webpack", "--port", "${PORT}"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
