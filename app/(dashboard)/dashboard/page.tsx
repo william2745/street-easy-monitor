@@ -86,9 +86,7 @@ export default async function DashboardPage() {
                 <span className="text-xs text-warm-600">
                   {monitor.last_run_at ? `Scanned ${relativeTime(monitor.last_run_at)}` : 'Not yet scanned'}
                 </span>
-                <div onClick={e => e.preventDefault()}>
-                  <RunNowButton monitorId={monitor.id} />
-                </div>
+                <RunNowButton monitorId={monitor.id} />
               </div>
             </Link>
           ))}

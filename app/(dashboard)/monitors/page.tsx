@@ -89,7 +89,7 @@ export default async function MonitorsPage() {
                 <span>{intervalLabel(monitor.scan_interval ?? 1440)}</span>
                 <span>Next: {nextRun(monitor)}</span>
                 {monitor.last_run_at && <span>Last: {relativeTime(monitor.last_run_at)}</span>}
-                <div className="ml-auto" onClick={e => e.preventDefault()}>
+                <div className="ml-auto">
                   <RunNowButton monitorId={monitor.id} />
                 </div>
               </div>
