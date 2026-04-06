@@ -52,7 +52,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!monitor) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { data: run } = await supabase
+  // Use service client for scraper_runs — RLS has no user policy on that table
+  const serviceSupabase = createServiceClient()
+
+  const { data: run } = await serviceSupabase
     .from('scraper_runs')
     .select('id, status, apify_run_id, started_at, finished_at, new_matches, listings_found')
     .eq('monitor_id', id)
@@ -89,7 +92,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
 
       const newStatus = apifyStatus === 'SUCCEEDED' ? 'succeeded' : 'failed'
-      const serviceSupabase = createServiceClient()
       let newMatches = 0
 
       if (newStatus === 'succeeded' && defaultDatasetId) {
