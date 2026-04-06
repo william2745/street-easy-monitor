@@ -19,6 +19,9 @@ function normalizeItem(item: ActorItem) {
   const address = [street, unit ? `#${unit}` : ''].filter(Boolean).join(' ') || undefined
   const photoKey = item.node_leadMedia_photo_key as string | undefined
 
+  // node_availableAt is the StreetEasy listing date (e.g. "2026-04-05")
+  const availableAt = item.node_availableAt as string | undefined
+
   return {
     listingId: nodeId,
     url,
@@ -30,6 +33,7 @@ function normalizeItem(item: ActorItem) {
     status: item.node_status as string | undefined,
     title: address,
     imageUrl: imageUrl(photoKey),
+    listedAt: availableAt ?? null,
   }
 }
 
@@ -148,6 +152,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 has_laundry: null,
                 image_url: l.imageUrl,
                 listing_url: l.url,
+                listed_at: l.listedAt,
               }))
 
               await serviceSupabase.from('listing_matches').insert(matchRows)

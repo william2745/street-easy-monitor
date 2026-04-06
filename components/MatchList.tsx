@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Image from 'next/image'
 import { ListingMatch } from '@/types/database'
 
-type SortField = 'found_at' | 'price'
+type SortField = 'found_at' | 'listed_at' | 'price'
 type SortDir = 'asc' | 'desc'
 
 function toEastern(dateStr: string): string {
@@ -17,6 +16,28 @@ function toEastern(dateStr: string): string {
     minute: '2-digit',
     hour12: true,
   }) + ' ET'
+}
+
+function toEasternDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+/** Extract photo key from stored image_url or use it directly if it's already a key */
+function proxyImgSrc(imageUrl: string | null): string | null {
+  if (!imageUrl) return null
+  // If it's our full CDN URL, extract the key
+  const match = imageUrl.match(/\/6\/([a-f0-9]+)-ci\//)
+  const key = match ? match[1] : null
+  if (key) return `/api/img?key=${key}`
+  // If it's already a bare key
+  if (/^[a-f0-9]{20,}$/i.test(imageUrl)) return `/api/img?key=${imageUrl}`
+  return null
 }
 
 export default function MatchList({
@@ -32,13 +53,15 @@ export default function MatchList({
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [bedroomFilter, setBedroomFilter] = useState<number | 'all'>('all')
   const [feeFilter, setFeeFilter] = useState<'all' | 'no_fee'>('all')
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set())
 
-  // Get unique bedroom counts for filter dropdown
   const bedroomOptions = useMemo(() => {
     const set = new Set<number>()
     matches.forEach(m => { if (m.bedrooms != null) set.add(m.bedrooms) })
     return Array.from(set).sort()
   }, [matches])
+
+  const hasListedAt = matches.some(m => m.listed_at != null)
 
   const filtered = useMemo(() => {
     let result = [...matches]
@@ -55,6 +78,11 @@ export default function MatchList({
         const pa = a.price ?? 0
         const pb = b.price ?? 0
         return sortDir === 'asc' ? pa - pb : pb - pa
+      }
+      if (sortField === 'listed_at') {
+        const da = a.listed_at ? new Date(a.listed_at).getTime() : 0
+        const db = b.listed_at ? new Date(b.listed_at).getTime() : 0
+        return sortDir === 'asc' ? da - db : db - da
       }
       // found_at
       const da = new Date(a.found_at).getTime()
@@ -77,28 +105,26 @@ export default function MatchList({
   const arrow = (field: SortField) =>
     sortField === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
 
+  const sortBtnClass = (field: SortField) =>
+    `text-xs px-3 py-1.5 rounded-full border transition-colors ${
+      sortField === field
+        ? 'bg-[#2C2420] text-white border-[#2C2420]'
+        : 'bg-white text-[#6B5E52] border-[#E8E0D5] hover:bg-[#F0EBE1]'
+    }`
+
   return (
     <div>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <button
-          onClick={() => toggleSort('found_at')}
-          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-            sortField === 'found_at'
-              ? 'bg-[#2C2420] text-white border-[#2C2420]'
-              : 'bg-white text-[#6B5E52] border-[#E8E0D5] hover:bg-[#F0EBE1]'
-          }`}
-        >
+        <button onClick={() => toggleSort('found_at')} className={sortBtnClass('found_at')}>
           Date found{arrow('found_at')}
         </button>
-        <button
-          onClick={() => toggleSort('price')}
-          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-            sortField === 'price'
-              ? 'bg-[#2C2420] text-white border-[#2C2420]'
-              : 'bg-white text-[#6B5E52] border-[#E8E0D5] hover:bg-[#F0EBE1]'
-          }`}
-        >
+        {hasListedAt && (
+          <button onClick={() => toggleSort('listed_at')} className={sortBtnClass('listed_at')}>
+            Date listed{arrow('listed_at')}
+          </button>
+        )}
+        <button onClick={() => toggleSort('price')} className={sortBtnClass('price')}>
           Price{arrow('price')}
         </button>
 
@@ -135,6 +161,8 @@ export default function MatchList({
           const isNew = newRunStart
             ? new Date(match.found_at) >= new Date(newRunStart)
             : false
+          const imgSrc = proxyImgSrc(match.image_url)
+          const showImg = imgSrc && !imgErrors.has(match.id)
 
           return (
             <a
@@ -145,14 +173,14 @@ export default function MatchList({
               className="flex bg-white rounded-xl shadow-[0_1px_4px_rgba(44,36,32,0.08)] hover:shadow-[0_4px_16px_rgba(44,36,32,0.12)] transition-shadow group overflow-hidden"
             >
               {/* Image */}
-              <div className="relative w-36 sm:w-44 shrink-0 bg-[#F0EBE1]">
-                {match.image_url ? (
-                  <Image
-                    src={match.image_url}
+              <div className="relative w-36 sm:w-44 shrink-0 bg-[#F0EBE1] min-h-[120px]">
+                {showImg ? (
+                  <img
+                    src={imgSrc}
                     alt={match.address ?? 'Listing photo'}
-                    fill
-                    sizes="176px"
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    onError={() => setImgErrors(prev => new Set(prev).add(match.id))}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-[#C4B5A4]">
@@ -197,8 +225,11 @@ export default function MatchList({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-[#9B8E82] shrink-0 ml-3 text-right">
-                    {toEastern(match.found_at)}
+                  <div className="text-xs text-[#9B8E82] shrink-0 ml-3 text-right leading-relaxed">
+                    {match.listed_at && (
+                      <div>Listed {toEasternDate(match.listed_at)}</div>
+                    )}
+                    <div>Found {toEastern(match.found_at)}</div>
                   </div>
                 </div>
               </div>

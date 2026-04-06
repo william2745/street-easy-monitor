@@ -55,6 +55,7 @@ export type ListingMatch = {
   listing_url: string
   alert_sent: boolean
   alert_sent_at: string | null
+  listed_at: string | null
   found_at: string
 }
 

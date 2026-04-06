@@ -16,6 +16,7 @@ type ApifyListing = {
   node_noFee?: boolean
   node_status?: string
   node_leadMedia_photo_key?: string
+  node_availableAt?: string
   // fallback legacy field names
   id?: string
   listingId?: string
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
       title: address,
       status: l.node_status,
       imageUrl: seImageUrl(l.node_leadMedia_photo_key),
+      listedAt: l.node_availableAt ?? null,
     }
   }).filter(l => l.resolvedId && l.status !== 'INACTIVE')
 
@@ -149,6 +151,7 @@ export async function POST(req: NextRequest) {
     has_laundry: null,
     image_url: l.imageUrl ?? null,
     listing_url: l.url,
+    listed_at: l.listedAt,
   }))
 
   const { data: insertedMatches } = await supabase
