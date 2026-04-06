@@ -159,11 +159,11 @@ export async function POST(req: NextRequest) {
     .insert(matchRows)
     .select()
 
-  // Send email alert to all users
+  // Send alerts
   if (insertedMatches && insertedMatches.length > 0) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, phone_number')
       .eq('id', userId)
       .single()
 
@@ -175,6 +175,32 @@ export async function POST(req: NextRequest) {
 
     if (profile?.email && monitor?.name) {
       await sendListingAlert(profile.email, monitor.name, insertedMatches as ListingMatch[])
+
+      // SMS alert (Pro plan with phone number set)
+      if (profile.phone_number && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+        const count = insertedMatches.length
+        const first = insertedMatches[0] as ListingMatch
+        const body = count === 1
+          ? `StreetSnipe: New match on ${monitor.name}! ${first.address ?? first.neighborhood ?? 'NYC listing'} — $${first.price?.toLocaleString()}/mo ${first.listing_url}`
+          : `StreetSnipe: ${count} new matches on ${monitor.name}! View at streeteasy-monitor.vercel.app/monitors/${monitorId}`
+
+        await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              From: process.env.TWILIO_FROM_NUMBER!,
+              To: profile.phone_number,
+              Body: body,
+            }).toString(),
+          }
+        ).catch(() => { /* don't fail the webhook if SMS fails */ })
+      }
+
       await supabase
         .from('listing_matches')
         .update({ alert_sent: true, alert_sent_at: new Date().toISOString() })

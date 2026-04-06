@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { formatDistanceToNow, addMinutes, isPast } from 'date-fns'
 import { Monitor, ListingMatch } from '@/types/database'
 import RunNowButton from '../monitors/RunNowButton'
+import CountdownTimer from '@/components/CountdownTimer'
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -19,13 +19,6 @@ function intervalLabel(mins: number): string {
   if (mins === 60) return 'Hourly'
   if (mins === 1440) return 'Daily'
   return `Every ${mins / 60}h`
-}
-
-function nextScan(m: Monitor): string {
-  if (!m.last_run_at) return 'Awaiting first scan'
-  const next = addMinutes(new Date(m.last_run_at), m.scan_interval ?? 1440)
-  if (isPast(next)) return 'Due now'
-  return `in ${formatDistanceToNow(next)}`
 }
 
 export default async function DashboardPage() {
@@ -80,7 +73,7 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-4 text-xs text-warm-600">
                 <span>${monitor.max_price.toLocaleString()}/mo</span>
                 <span>{intervalLabel(monitor.scan_interval ?? 1440)}</span>
-                <span>Next: {nextScan(monitor)}</span>
+                <span>Next: <CountdownTimer lastRunAt={monitor.last_run_at} scanInterval={monitor.scan_interval ?? 1440} /></span>
               </div>
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-warm-300">
                 <span className="text-xs text-warm-600">
