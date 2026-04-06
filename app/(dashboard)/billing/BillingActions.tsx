@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function BillingActions({
   isPro,
@@ -10,7 +9,6 @@ export default function BillingActions({
   isPro: boolean
   showUpgrade?: boolean
 }) {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function handleUpgrade() {
@@ -34,9 +32,9 @@ export default function BillingActions({
       <button
         onClick={handleUpgrade}
         disabled={loading}
-        className="w-full bg-[#C4703A] text-white py-2.5 rounded-full text-sm font-medium hover:bg-[#A85C2E] transition-colors disabled:opacity-50"
+        className="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
       >
-        {loading ? 'Redirecting…' : 'Upgrade to Pro — $9.99/mo'}
+        {loading ? 'Redirecting...' : 'Upgrade to Pro'}
       </button>
     )
   }
@@ -45,9 +43,9 @@ export default function BillingActions({
     <button
       onClick={handlePortal}
       disabled={loading}
-      className="w-full border border-[#E8E0D5] text-[#6B5E52] py-2.5 rounded-full text-sm hover:bg-[#F0EBE1] transition-colors disabled:opacity-50"
+      className="w-full border border-zinc-200 text-zinc-600 py-2.5 rounded-lg text-sm hover:bg-zinc-50 transition-colors disabled:opacity-50"
     >
-      {loading ? 'Opening portal…' : 'Manage subscription'}
+      {loading ? 'Opening portal...' : 'Manage subscription'}
     </button>
   )
 }

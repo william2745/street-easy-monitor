@@ -6,40 +6,23 @@ import { ListingMatch } from '@/types/database'
 type SortField = 'found_at' | 'listed_at' | 'price'
 type SortDir = 'asc' | 'desc'
 
-function toEastern(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }) + ' ET'
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 function toEasternDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', {
+  return new Date(dateStr).toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
   })
-}
-
-/** Generate a warm-toned gradient based on the listing ID for visual variety */
-function placeholderGradient(listingId: string): string {
-  const hash = listingId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  const gradients = [
-    'from-[#F5E8DC] to-[#E8D5C4]',
-    'from-[#E8D5C4] to-[#D4C0AA]',
-    'from-[#F0EBE1] to-[#E0D6C8]',
-    'from-[#F5EDE3] to-[#E5D8CA]',
-    'from-[#EDE4D8] to-[#D8CBBB]',
-    'from-[#F2E6D9] to-[#DFD0BF]',
-  ]
-  return gradients[hash % gradients.length]
 }
 
 export default function MatchList({
@@ -65,102 +48,74 @@ export default function MatchList({
 
   const filtered = useMemo(() => {
     let result = [...matches]
-
-    if (bedroomFilter !== 'all') {
-      result = result.filter(m => m.bedrooms === bedroomFilter)
-    }
-    if (feeFilter === 'no_fee') {
-      result = result.filter(m => m.no_fee === true)
-    }
+    if (bedroomFilter !== 'all') result = result.filter(m => m.bedrooms === bedroomFilter)
+    if (feeFilter === 'no_fee') result = result.filter(m => m.no_fee === true)
 
     result.sort((a, b) => {
       if (sortField === 'price') {
-        const pa = a.price ?? 0
-        const pb = b.price ?? 0
-        return sortDir === 'asc' ? pa - pb : pb - pa
+        return sortDir === 'asc' ? (a.price ?? 0) - (b.price ?? 0) : (b.price ?? 0) - (a.price ?? 0)
       }
       if (sortField === 'listed_at') {
         const da = a.listed_at ? new Date(a.listed_at).getTime() : 0
         const db = b.listed_at ? new Date(b.listed_at).getTime() : 0
         return sortDir === 'asc' ? da - db : db - da
       }
-      const da = new Date(a.found_at).getTime()
-      const db = new Date(b.found_at).getTime()
-      return sortDir === 'asc' ? da - db : db - da
+      return sortDir === 'asc'
+        ? new Date(a.found_at).getTime() - new Date(b.found_at).getTime()
+        : new Date(b.found_at).getTime() - new Date(a.found_at).getTime()
     })
-
     return result
   }, [matches, sortField, sortDir, bedroomFilter, feeFilter])
 
   function toggleSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir(field === 'price' ? 'asc' : 'desc')
-    }
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir(field === 'price' ? 'asc' : 'desc') }
   }
 
-  const arrow = (field: SortField) =>
-    sortField === field ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+  const arrow = (field: SortField) => sortField === field ? (sortDir === 'asc' ? ' \u2191' : ' \u2193') : ''
 
-  const sortBtnClass = (field: SortField) =>
-    `text-xs px-3 py-1.5 rounded-full border transition-colors ${
+  const pillCls = (field: SortField) =>
+    `text-[11px] px-2 py-1 rounded-md border font-medium transition-colors cursor-pointer ${
       sortField === field
-        ? 'bg-[#2C2420] text-white border-[#2C2420]'
-        : 'bg-white text-[#6B5E52] border-[#E8E0D5] hover:bg-[#F0EBE1]'
+        ? 'bg-zinc-900 text-white border-zinc-900'
+        : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300'
     }`
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <button onClick={() => toggleSort('found_at')} className={sortBtnClass('found_at')}>
-          Date found{arrow('found_at')}
-        </button>
-        {hasListedAt && (
-          <button onClick={() => toggleSort('listed_at')} className={sortBtnClass('listed_at')}>
-            Available{arrow('listed_at')}
-          </button>
-        )}
-        <button onClick={() => toggleSort('price')} className={sortBtnClass('price')}>
-          Price{arrow('price')}
-        </button>
+      {/* Compact toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        <button onClick={() => toggleSort('found_at')} className={pillCls('found_at')}>Found{arrow('found_at')}</button>
+        {hasListedAt && <button onClick={() => toggleSort('listed_at')} className={pillCls('listed_at')}>Available{arrow('listed_at')}</button>}
+        <button onClick={() => toggleSort('price')} className={pillCls('price')}>Price{arrow('price')}</button>
 
-        <span className="w-px h-5 bg-[#E8E0D5] mx-1" />
+        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
 
         <select
           value={bedroomFilter === 'all' ? 'all' : String(bedroomFilter)}
           onChange={e => setBedroomFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          className="text-xs px-3 py-1.5 rounded-full border border-[#E8E0D5] bg-white text-[#6B5E52] focus:outline-none focus:border-[#C4703A]"
+          className="text-[11px] px-2 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 focus:outline-none focus:border-emerald-500"
         >
-          <option value="all">All bedrooms</option>
-          {bedroomOptions.map(b => (
-            <option key={b} value={b}>{b === 0 ? 'Studio' : `${b} BR`}</option>
-          ))}
+          <option value="all">All beds</option>
+          {bedroomOptions.map(b => <option key={b} value={b}>{b === 0 ? 'Studio' : `${b}BR`}</option>)}
         </select>
 
         <select
           value={feeFilter}
           onChange={e => setFeeFilter(e.target.value as 'all' | 'no_fee')}
-          className="text-xs px-3 py-1.5 rounded-full border border-[#E8E0D5] bg-white text-[#6B5E52] focus:outline-none focus:border-[#C4703A]"
+          className="text-[11px] px-2 py-1 rounded-md border border-zinc-200 bg-white text-zinc-600 focus:outline-none focus:border-emerald-500"
         >
           <option value="all">Any fee</option>
           <option value="no_fee">No fee only</option>
         </select>
 
-        <span className="text-xs text-[#6B5E52] ml-auto">
-          {filtered.length} of {matches.length} listing{matches.length !== 1 ? 's' : ''}
-        </span>
+        <span className="text-[11px] text-zinc-400 ml-auto tabular-nums">{filtered.length}/{matches.length}</span>
       </div>
 
-      {/* Listing cards */}
-      <div className="space-y-3">
+      {/* Rows */}
+      <div className="bg-white rounded-lg border border-zinc-200 divide-y divide-zinc-100 overflow-hidden">
         {filtered.map(match => {
-          const isNew = newRunStart
-            ? new Date(match.found_at) >= new Date(newRunStart)
-            : false
-          const gradient = placeholderGradient(match.listing_id)
+          const isNew = newRunStart ? new Date(match.found_at) >= new Date(newRunStart) : false
 
           return (
             <a
@@ -168,64 +123,45 @@ export default function MatchList({
               href={match.listing_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex bg-white rounded-xl shadow-[0_1px_4px_rgba(44,36,32,0.08)] hover:shadow-[0_4px_16px_rgba(44,36,32,0.12)] transition-shadow group overflow-hidden"
+              className={`flex items-center px-4 py-3 transition-colors group ${isNew ? 'bg-emerald-50/40' : 'hover:bg-zinc-50'}`}
             >
-              <div className={`relative w-32 sm:w-40 shrink-0 min-h-[110px] bg-gradient-to-br ${gradient} flex flex-col items-center justify-center gap-1.5`}>
-                {match.price != null && (
-                  <span className="text-lg font-bold text-[#2C2420]/70">
-                    ${match.price.toLocaleString()}
-                  </span>
-                )}
-                <span className="text-xs font-medium text-[#6B5E52]/70 bg-white/50 px-2 py-0.5 rounded-full">
-                  {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms} BR`) : '—'}
-                </span>
-                {isNew && (
-                  <span className="absolute top-2 left-2 text-xs bg-[#C4703A] text-white px-2 py-0.5 rounded-full font-medium shadow-sm">
-                    NEW
-                  </span>
-                )}
+              <div className="w-[72px] shrink-0 mr-3">
+                <div className="text-[15px] font-bold text-zinc-900 tabular-nums leading-tight">
+                  {match.price != null ? `$${match.price.toLocaleString()}` : '—'}
+                </div>
+                <div className="text-[10px] text-zinc-400">/mo</div>
               </div>
 
-              {/* Details */}
-              <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
-                <div>
-                  <div className="text-sm font-medium text-[#2C2420] group-hover:text-[#C4703A] transition-colors truncate">
+              <div className="flex-1 min-w-0 mr-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-zinc-900 truncate group-hover:text-emerald-700 transition-colors">
                     {match.address ?? match.neighborhood ?? 'NYC listing'}
-                  </div>
-                  <div className="text-xs text-[#6B5E52] mt-0.5">
-                    {match.neighborhood}
-                  </div>
+                  </span>
+                  {isNew && (
+                    <span className="text-[9px] font-bold bg-emerald-600 text-white px-1 py-px rounded uppercase leading-none shrink-0">new</span>
+                  )}
                 </div>
-
-                <div className="flex items-center justify-between mt-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {match.price != null && (
-                      <span className="text-sm font-semibold text-[#2C2420]">
-                        ${match.price.toLocaleString()}/mo
-                      </span>
-                    )}
-                    {match.no_fee && (
-                      <span className="text-xs bg-[#F5E8DC] text-[#C4703A] px-2 py-0.5 rounded-full font-medium">
-                        No fee
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-[#9B8E82] shrink-0 ml-3 text-right leading-relaxed">
-                    {match.listed_at && (
-                      <div>Available {toEasternDate(match.listed_at)}</div>
-                    )}
-                    <div>Found {toEastern(match.found_at)}</div>
-                  </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[11px] text-zinc-400">{match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms}BR`) : ''}</span>
+                  {match.no_fee && <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1 py-px rounded font-semibold">No fee</span>}
+                  {match.neighborhood && match.address && <span className="text-[11px] text-zinc-300">{match.neighborhood}</span>}
                 </div>
               </div>
+
+              <div className="text-right shrink-0 mr-2">
+                <div className="text-[11px] text-zinc-400 tabular-nums">{relativeTime(match.found_at)}</div>
+                {match.listed_at && <div className="text-[10px] text-zinc-300">Avail {toEasternDate(match.listed_at)}</div>}
+              </div>
+
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-zinc-200 group-hover:text-emerald-500 shrink-0 transition-colors" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
             </a>
           )
         })}
 
-        {filtered.length === 0 && matches.length > 0 && (
-          <div className="bg-white rounded-xl p-8 text-center shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
-            <p className="text-sm text-[#6B5E52]">No matches with current filters.</p>
-          </div>
+        {filtered.length === 0 && (
+          <div className="p-6 text-center text-sm text-zinc-400">No matches with current filters</div>
         )}
       </div>
     </div>

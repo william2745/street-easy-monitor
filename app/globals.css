@@ -1,18 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF7F2;
-  --foreground: #2C2420;
+  --background: #FAFAFA;
+  --foreground: #18181B;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes pulse-bar {
-  0%   { transform: translateX(-100%); width: 60%; }
-  50%  { transform: translateX(80%);   width: 60%; }
-  100% { transform: translateX(-100%); width: 60%; }
+/* Scanning progress animation */
+@keyframes slide-right {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Subtle pulse for live indicators */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+::selection {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4D4D8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A1A1AA;
 }

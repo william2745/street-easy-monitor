@@ -57,8 +57,8 @@ const BEDROOMS = [
 const AMENITIES = [
   { value: 'no_fee', label: 'No broker fee' },
   { value: 'pets_ok', label: 'Pet friendly' },
-  { value: 'laundry_in_unit', label: 'Laundry in unit' },
-  { value: 'laundry_in_building', label: 'Laundry in building' },
+  { value: 'laundry_in_unit', label: 'In-unit laundry' },
+  { value: 'laundry_in_building', label: 'Building laundry' },
   { value: 'doorman', label: 'Doorman' },
   { value: 'elevator', label: 'Elevator' },
   { value: 'gym', label: 'Gym' },
@@ -84,6 +84,13 @@ const PRO_INTERVALS = [
   { value: 360, label: 'Every 6 hours' },
 ]
 
+const chipClass = (active: boolean) =>
+  `text-xs px-3 py-1.5 rounded-md border transition-colors font-medium ${
+    active
+      ? 'bg-emerald-600 border-emerald-600 text-white'
+      : 'border-zinc-200 text-zinc-600 hover:border-emerald-300 hover:text-emerald-700'
+  }`
+
 export default function NewMonitorPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -96,25 +103,10 @@ export default function NewMonitorPage() {
   const [maxPrice, setMaxPrice] = useState('')
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
   const [scanInterval, setScanInterval] = useState(1440)
-  // TODO: detect isPro from session for pro intervals
   const isPro = false
 
-  function toggleNeighborhood(value: string) {
-    setSelectedNeighborhoods(prev =>
-      prev.includes(value) ? prev.filter(n => n !== value) : [...prev, value]
-    )
-  }
-
-  function toggleBedroom(value: number) {
-    setSelectedBedrooms(prev =>
-      prev.includes(value) ? prev.filter(b => b !== value) : [...prev, value]
-    )
-  }
-
-  function toggleAmenity(value: string) {
-    setSelectedAmenities(prev =>
-      prev.includes(value) ? prev.filter(a => a !== value) : [...prev, value]
-    )
+  function toggle<T>(arr: T[], val: T): T[] {
+    return arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val]
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -125,7 +117,6 @@ export default function NewMonitorPage() {
     setLoading(true)
     setError('')
 
-    // Map amenity values to legacy boolean fields + amenities array
     const no_fee = selectedAmenities.includes('no_fee')
     const pet_friendly = selectedAmenities.includes('pets_ok')
     const laundry_in_unit = selectedAmenities.includes('laundry_in_unit')
@@ -141,11 +132,7 @@ export default function NewMonitorPage() {
         bedrooms: selectedBedrooms.length > 0 ? selectedBedrooms : null,
         min_price: minPrice ? parseInt(minPrice) : null,
         max_price: parseInt(maxPrice),
-        no_fee,
-        pet_friendly,
-        laundry_in_unit,
-        laundry_in_building,
-        amenities,
+        no_fee, pet_friendly, laundry_in_unit, laundry_in_building, amenities,
         scan_interval: scanInterval,
       }),
     })
@@ -164,108 +151,108 @@ export default function NewMonitorPage() {
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl text-[#2C2420]">New monitor</h1>
-        <p className="text-sm text-[#6B5E52] mt-1">Set your criteria and we&apos;ll alert you when a match appears.</p>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-zinc-900">New monitor</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">Define your search criteria. We&apos;ll alert you when matches appear.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
-        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
-          <label className="block text-sm font-medium text-[#2C2420] mb-3">Monitor name</label>
+        <section className="bg-white rounded-lg border border-zinc-200 p-5">
+          <label className="block text-sm font-medium text-zinc-900 mb-2">Monitor name</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. 1BR under $2,500 Manhattan"
-            className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]"
+            placeholder="e.g. 1BR under $2,500 in Manhattan"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
           />
-        </div>
+        </section>
 
         {/* Neighborhoods */}
-        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
-          <label className="block text-sm font-medium text-[#2C2420] mb-4">Neighborhoods</label>
+        <section className="bg-white rounded-lg border border-zinc-200 p-5">
+          <label className="block text-sm font-medium text-zinc-900 mb-3">Neighborhoods</label>
           {boroughs.map(borough => (
-            <div key={borough} className="mb-4">
-              <div className="text-xs font-medium text-[#6B5E52] mb-2">{borough}</div>
-              <div className="flex flex-wrap gap-2">
+            <div key={borough} className="mb-4 last:mb-0">
+              <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">{borough}</div>
+              <div className="flex flex-wrap gap-1.5">
                 {NYC_NEIGHBORHOODS.filter(n => n.borough === borough).map(n => (
-                  <button key={n.value} type="button" onClick={() => toggleNeighborhood(n.value)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedNeighborhoods.includes(n.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+                  <button key={n.value} type="button" onClick={() => setSelectedNeighborhoods(prev => toggle(prev, n.value))}
+                    className={chipClass(selectedNeighborhoods.includes(n.value))}>
                     {n.label}
                   </button>
                 ))}
               </div>
             </div>
           ))}
-        </div>
+        </section>
 
         {/* Bedrooms + Price */}
-        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)] space-y-5">
+        <section className="bg-white rounded-lg border border-zinc-200 p-5 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-[#2C2420] mb-3">Bedrooms</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium text-zinc-900 mb-2">Bedrooms</label>
+            <div className="flex flex-wrap gap-1.5">
               {BEDROOMS.map(b => (
-                <button key={b.value} type="button" onClick={() => toggleBedroom(b.value)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedBedrooms.includes(b.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+                <button key={b.value} type="button" onClick={() => setSelectedBedrooms(prev => toggle(prev, b.value))}
+                  className={chipClass(selectedBedrooms.includes(b.value))}>
                   {b.label}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-[#6B5E52] mt-2">Leave empty to match any</p>
+            <p className="text-xs text-zinc-400 mt-2">Leave empty for any</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#6B5E52] mb-1.5">Min rent (optional)</label>
+              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Min rent</label>
               <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="1000"
-                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#6B5E52] mb-1.5">Max rent *</label>
+              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Max rent *</label>
               <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="2500" required
-                className="w-full border border-[#E8E0D5] rounded-xl px-3.5 py-2.5 text-sm text-[#2C2420] bg-white focus:outline-none focus:ring-2 focus:ring-[#C4703A]/30 focus:border-[#C4703A]" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors" />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Amenities */}
-        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
-          <label className="block text-sm font-medium text-[#2C2420] mb-4">Amenities</label>
-          <div className="flex flex-wrap gap-2">
+        <section className="bg-white rounded-lg border border-zinc-200 p-5">
+          <label className="block text-sm font-medium text-zinc-900 mb-3">Amenities</label>
+          <div className="flex flex-wrap gap-1.5">
             {AMENITIES.map(a => (
-              <button key={a.value} type="button" onClick={() => toggleAmenity(a.value)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${selectedAmenities.includes(a.value) ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+              <button key={a.value} type="button" onClick={() => setSelectedAmenities(prev => toggle(prev, a.value))}
+                className={chipClass(selectedAmenities.includes(a.value))}>
                 {a.label}
               </button>
             ))}
           </div>
-          <p className="text-xs text-[#6B5E52] mt-3">Leave empty to match any</p>
-        </div>
+          <p className="text-xs text-zinc-400 mt-2">Leave empty for any</p>
+        </section>
 
         {/* Scan frequency */}
-        <div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(44,36,32,0.08)]">
-          <label className="block text-sm font-medium text-[#2C2420] mb-1">Scan frequency</label>
-          {!isPro && <p className="text-xs text-[#6B5E52] mb-3">Upgrade to Pro for scans as fast as every 10 minutes.</p>}
-          <div className="flex flex-wrap gap-2">
+        <section className="bg-white rounded-lg border border-zinc-200 p-5">
+          <label className="block text-sm font-medium text-zinc-900 mb-1">Scan frequency</label>
+          {!isPro && <p className="text-xs text-zinc-400 mb-3">Upgrade to Pro for scans as fast as every 10 minutes.</p>}
+          <div className="flex flex-wrap gap-1.5">
             {intervals.map(i => (
               <button key={i.value} type="button" onClick={() => setScanInterval(i.value)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${scanInterval === i.value ? 'bg-[#C4703A] border-[#C4703A] text-white' : 'border-[#E8E0D5] text-[#6B5E52] hover:border-[#C4703A] hover:text-[#C4703A]'}`}>
+                className={chipClass(scanInterval === i.value)}>
                 {i.label}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
+          <div className="bg-red-50 border border-red-100 rounded-lg px-4 py-3 text-sm text-red-600">{error}</div>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-2">
           <button type="submit" disabled={loading}
-            className="bg-[#C4703A] text-white px-8 py-2.5 rounded-full text-sm font-medium hover:bg-[#A85C2E] transition-colors disabled:opacity-50">
-            {loading ? 'Creating…' : 'Create monitor'}
+            className="bg-emerald-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50">
+            {loading ? 'Creating...' : 'Create monitor'}
           </button>
-          <button type="button" onClick={() => router.back()} className="text-sm text-[#6B5E52] hover:text-[#2C2420] transition-colors">
+          <button type="button" onClick={() => router.back()} className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors">
             Cancel
           </button>
         </div>
