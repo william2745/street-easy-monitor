@@ -5,6 +5,11 @@ import { Monitor } from '@/types/database'
 // memo23 actor returns GraphQL-flattened fields with node_ prefix
 type ActorItem = Record<string, unknown>
 
+function imageUrl(key: string | undefined): string | null {
+  if (!key) return null
+  return `https://media.streeteasy.com/6/${key}-ci/0/1/fill/400/300/center/1`
+}
+
 function normalizeItem(item: ActorItem) {
   const nodeId = item.node_id as string | undefined
   const urlPath = item.node_urlPath as string | undefined
@@ -12,6 +17,7 @@ function normalizeItem(item: ActorItem) {
   const street = item.node_street as string | undefined
   const unit = item.node_unit as string | undefined
   const address = [street, unit ? `#${unit}` : ''].filter(Boolean).join(' ') || undefined
+  const photoKey = item.node_leadMedia_photo_key as string | undefined
 
   return {
     listingId: nodeId,
@@ -23,7 +29,7 @@ function normalizeItem(item: ActorItem) {
     noFee: item.node_noFee as boolean | undefined,
     status: item.node_status as string | undefined,
     title: address,
-    imageKey: item.node_leadMedia_photo_key as string | undefined,
+    imageUrl: imageUrl(photoKey),
   }
 }
 
@@ -140,7 +146,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 no_fee: l.noFee ?? null,
                 pet_friendly: null,
                 has_laundry: null,
-                image_url: null,
+                image_url: l.imageUrl,
                 listing_url: l.url,
               }))
 

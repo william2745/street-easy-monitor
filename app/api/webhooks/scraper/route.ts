@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  function seImageUrl(key: string | undefined): string | null {
+    if (!key) return null
+    return `https://media.streeteasy.com/6/${key}-ci/0/1/fill/400/300/center/1`
+  }
+
   // Normalize memo23 actor's node_-prefixed GraphQL fields + legacy fallbacks
   const normalized = listings.map(l => {
     const urlPath = l.node_urlPath
@@ -91,6 +96,7 @@ export async function POST(req: NextRequest) {
       noFee: l.node_noFee ?? l.noFee,
       title: address,
       status: l.node_status,
+      imageUrl: seImageUrl(l.node_leadMedia_photo_key),
     }
   }).filter(l => l.resolvedId && l.status !== 'INACTIVE')
 
@@ -141,7 +147,7 @@ export async function POST(req: NextRequest) {
     no_fee: l.noFee ?? null,
     pet_friendly: null,
     has_laundry: null,
-    image_url: null,
+    image_url: l.imageUrl ?? null,
     listing_url: l.url,
   }))
 

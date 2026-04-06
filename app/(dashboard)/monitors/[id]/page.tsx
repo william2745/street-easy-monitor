@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { formatDistanceToNow, format, addMinutes, isPast } from 'date-fns'
+import { formatDistanceToNow, addMinutes, isPast } from 'date-fns'
 import { ListingMatch } from '@/types/database'
 import MonitorControls from './MonitorControls'
+import MatchList from '@/components/MatchList'
 
 function getNextRun(lastRunAt: string | null, intervalMinutes: number): string {
   if (!lastRunAt) return 'Pending first scan'
@@ -12,9 +14,21 @@ function getNextRun(lastRunAt: string | null, intervalMinutes: number): string {
   return `Next scan ${formatDistanceToNow(next, { addSuffix: true })}`
 }
 
+function toEastern(dateStr: string): string {
+  return new Date(dateStr).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }) + ' ET'
+}
+
 export default async function MonitorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const serviceSupabase = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: monitor } = await supabase
@@ -26,8 +40,8 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
 
   if (!monitor) notFound()
 
-  // Get last scraper run to identify "new" matches
-  const { data: lastRun } = await supabase
+  // Use service client for scraper_runs (RLS has no user policy)
+  const { data: lastRun } = await serviceSupabase
     .from('scraper_runs')
     .select('started_at')
     .eq('monitor_id', id)
@@ -43,7 +57,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
     .select('*')
     .eq('monitor_id', id)
     .order('found_at', { ascending: false })
-    .limit(100)
+    .limit(200)
 
   const scanInterval = monitor.scan_interval ?? 1440
 
@@ -92,7 +106,7 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
           <p className="text-xs text-[#6B5E52]">
             {getNextRun(monitor.last_run_at, scanInterval)}
             {monitor.last_run_at && (
-              <> · Last scan {formatDistanceToNow(new Date(monitor.last_run_at), { addSuffix: true })}</>
+              <> · Last scan {toEastern(monitor.last_run_at)}</>
             )}
           </p>
         </div>
@@ -108,49 +122,11 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
           <p className="text-[#6B5E52]">No matches yet. Use &quot;Check now&quot; or wait for the next scan.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {(matches as ListingMatch[]).map(match => {
-            const isNew = currentRunStart
-              ? new Date(match.found_at) >= new Date(currentRunStart)
-              : false
-            const isPrev = !isNew && previousRunStart
-              ? new Date(match.found_at) >= new Date(previousRunStart)
-              : false
-
-            return (
-              <a
-                key={match.id}
-                href={match.listing_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between bg-white rounded-xl px-5 py-4 shadow-[0_1px_4px_rgba(44,36,32,0.08)] hover:shadow-[0_4px_16px_rgba(44,36,32,0.12)] transition-shadow group"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {isNew && (
-                      <span className="text-xs bg-[#C4703A] text-white px-2 py-0.5 rounded-full font-medium shrink-0">NEW</span>
-                    )}
-                    <div className="text-sm font-medium text-[#2C2420] group-hover:text-[#C4703A] transition-colors truncate">
-                      {match.address ?? match.neighborhood ?? 'NYC listing'}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-[#6B5E52]">
-                      {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms}BR`) : ''}
-                      {match.price ? ` · $${match.price.toLocaleString()}/mo` : ''}
-                    </span>
-                    {match.no_fee && <span className="text-xs bg-[#F5E8DC] text-[#C4703A] px-2 py-0.5 rounded-full">No fee</span>}
-                    {match.pet_friendly && <span className="text-xs bg-[#F5E8DC] text-[#C4703A] px-2 py-0.5 rounded-full">Pets</span>}
-                    {match.has_laundry && <span className="text-xs bg-[#F5E8DC] text-[#C4703A] px-2 py-0.5 rounded-full">Laundry</span>}
-                  </div>
-                </div>
-                <div className="text-xs text-[#6B5E52] shrink-0 ml-4">
-                  {format(new Date(match.found_at), 'MMM d, h:mm a')}
-                </div>
-              </a>
-            )
-          })}
-        </div>
+        <MatchList
+          matches={matches as ListingMatch[]}
+          newRunStart={currentRunStart}
+          prevRunStart={previousRunStart}
+        />
       )}
     </div>
   )
