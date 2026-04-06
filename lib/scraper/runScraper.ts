@@ -22,14 +22,18 @@ export async function runScraper(monitor: Monitor, runId: string): Promise<{ new
   }
   if (batches.length === 0) batches.push([]) // no neighborhood filter
 
-  const batchResults = await Promise.all(
+  const batchResults = (await Promise.allSettled(
     batches.map(async (batch) => {
       const batchMonitor = { ...monitor, neighborhoods: batch }
       const searchUrl = buildSearchUrl(batchMonitor as Monitor)
       console.log(`[scraper] Fetching: ${searchUrl}`)
       return fetchListings(searchUrl)
     })
-  )
+  )).flatMap(r => {
+    if (r.status === 'fulfilled') return r.value
+    console.error('[scraper] Batch failed:', r.reason)
+    return []
+  })
 
   // Flatten + deduplicate by listing id
   const seenIds = new Set<string>()

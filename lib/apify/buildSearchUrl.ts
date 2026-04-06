@@ -7,7 +7,7 @@ const NYC_NEIGHBORHOOD_SLUGS: Record<string, string> = {
   'harlem': 'harlem',
   'washington-heights': 'washington-heights',
   'inwood': 'inwood',
-  'hell-s-kitchen': 'hell-s-kitchen',
+  'hell-s-kitchen': 'hells-kitchen',
   'midtown': 'midtown',
   'murray-hill': 'murray-hill',
   'gramercy': 'gramercy',
