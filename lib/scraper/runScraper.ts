@@ -12,11 +12,33 @@ export async function runScraper(monitor: Monitor, runId: string): Promise<{ new
   const supabase = createServiceClient()
   const monitorId = monitor.id
 
-  const searchUrl = buildSearchUrl(monitor)
-  console.log(`[scraper] Fetching: ${searchUrl}`)
+  // StreetEasy 404s when too many neighborhoods are in the URL path.
+  // Batch into groups of 5 and fetch in parallel, then dedupe by listing id.
+  const BATCH_SIZE = 5
+  const neighborhoods = monitor.neighborhoods ?? []
+  const batches: string[][] = []
+  for (let i = 0; i < neighborhoods.length; i += BATCH_SIZE) {
+    batches.push(neighborhoods.slice(i, i + BATCH_SIZE))
+  }
+  if (batches.length === 0) batches.push([]) // no neighborhood filter
 
-  const listings = await fetchListings(searchUrl)
-  console.log(`[scraper] Found ${listings.length} listings`)
+  const batchResults = await Promise.all(
+    batches.map(async (batch) => {
+      const batchMonitor = { ...monitor, neighborhoods: batch }
+      const searchUrl = buildSearchUrl(batchMonitor as Monitor)
+      console.log(`[scraper] Fetching: ${searchUrl}`)
+      return fetchListings(searchUrl)
+    })
+  )
+
+  // Flatten + deduplicate by listing id
+  const seenIds = new Set<string>()
+  const listings = batchResults.flat().filter(l => {
+    if (seenIds.has(l.id)) return false
+    seenIds.add(l.id)
+    return true
+  })
+  console.log(`[scraper] Found ${listings.length} listings across ${batches.length} batch(es)`)
 
   if (listings.length === 0) {
     await supabase.from('monitors').update({ last_run_at: new Date().toISOString() }).eq('id', monitorId)
