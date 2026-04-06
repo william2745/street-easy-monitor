@@ -32,11 +32,11 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: monitors }, { data: matches }, { count: totalCount }] = await Promise.all([
+  const [{ data: monitors }, { data: matches }] = await Promise.all([
     supabase.from('monitors').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }),
     supabase.from('listing_matches').select('*').eq('user_id', user!.id).order('found_at', { ascending: false }).limit(50),
-    supabase.from('listing_matches').select('id', { count: 'exact', head: true }).eq('user_id', user!.id),
   ])
+  const totalCount = (matches ?? []).length
 
   const todayCount = (matches ?? []).filter((m: ListingMatch) => new Date(m.found_at) > new Date(Date.now() - 86400000)).length
   const hasMonitors = (monitors ?? []).length > 0
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
           <h1 className="font-serif text-3xl text-warm-900">Dashboard</h1>
           <p className="text-sm text-warm-700 mt-1">
             {hasMonitors
-              ? `${(monitors ?? []).filter((m: Monitor) => m.is_active).length} active monitors · ${totalCount ?? 0} listings found`
+              ? `${(monitors ?? []).filter((m: Monitor) => m.is_active).length} active monitors · ${totalCount} listings found`
               : 'Set up a monitor to start finding apartments'}
           </p>
         </div>
