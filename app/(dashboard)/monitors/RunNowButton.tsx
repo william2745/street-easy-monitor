@@ -29,29 +29,20 @@ export default function RunNowButton({ monitorId }: { monitorId: string }) {
     <button
       onClick={handleRunNow}
       disabled={loading}
-      className={`shrink-0 text-xs px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 flex items-center gap-1 font-medium ${
+      className={`shrink-0 text-[11px] px-2 py-0.5 rounded transition-colors disabled:opacity-50 font-medium ${
         status === 'error'
-          ? 'border border-red-200 text-red-500 bg-red-50'
+          ? 'text-red-500 bg-red-50 border border-red-200'
           : status === 'queued'
-          ? 'border border-emerald-200 text-emerald-600 bg-emerald-50'
-          : 'border border-zinc-200 text-zinc-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50'
+          ? 'text-violet-600 bg-violet-50 border border-violet-200'
+          : 'text-zinc-500 hover:text-violet-600 hover:bg-violet-50 border border-transparent hover:border-violet-200'
       }`}
     >
       {loading ? (
-        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      ) : status === 'queued' ? (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      ) : (
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
-      )}
-      {loading ? 'Scanning' : status === 'queued' ? 'Queued' : status === 'error' ? 'Failed' : 'Scan'}
+        <span className="flex items-center gap-1">
+          <svg className="animate-spin h-2.5 w-2.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+          scan
+        </span>
+      ) : status === 'queued' ? 'queued' : status === 'error' ? 'failed' : 'scan'}
     </button>
   )
 }

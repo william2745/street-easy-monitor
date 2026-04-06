@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAFAFA;
-  --foreground: #18181B;
+  --background: #FFFFFF;
+  --foreground: #111111;
 }
 
 body {
@@ -10,18 +10,25 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "rlig" 1, "calt" 1;
 }
 
-/* Scanning progress animation */
-@keyframes slide-right {
-  0%   { transform: translateX(-100%); }
+/* Scanning shimmer */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
 
-/* Subtle pulse for live indicators */
+/* Status pulse */
 @keyframes live-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.3; }
+}
+
+/* Row highlight fade in */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 ::selection {
@@ -29,17 +36,16 @@ body {
   color: #065F46;
 }
 
-/* Clean scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* Minimal scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E4E4E7; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+
+/* Number inputs — remove spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #A1A1AA;
-}
+input[type="number"] { -moz-appearance: textfield; }

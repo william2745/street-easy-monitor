@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 
-export default function BillingActions({
-  isPro,
-  showUpgrade = false,
-}: {
-  isPro: boolean
-  showUpgrade?: boolean
-}) {
+export default function BillingActions({ isPro, showUpgrade = false }: { isPro: boolean; showUpgrade?: boolean }) {
   const [loading, setLoading] = useState(false)
 
   async function handleUpgrade() {
@@ -29,23 +23,17 @@ export default function BillingActions({
 
   if (showUpgrade || !isPro) {
     return (
-      <button
-        onClick={handleUpgrade}
-        disabled={loading}
-        className="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
-      >
+      <button onClick={handleUpgrade} disabled={loading}
+        className="w-full bg-violet-600 text-white py-2 rounded-md text-[13px] font-medium hover:bg-violet-500 transition-colors disabled:opacity-50">
         {loading ? 'Redirecting...' : 'Upgrade to Pro'}
       </button>
     )
   }
 
   return (
-    <button
-      onClick={handlePortal}
-      disabled={loading}
-      className="w-full border border-zinc-200 text-zinc-600 py-2.5 rounded-lg text-sm hover:bg-zinc-50 transition-colors disabled:opacity-50"
-    >
-      {loading ? 'Opening portal...' : 'Manage subscription'}
+    <button onClick={handlePortal} disabled={loading}
+      className="w-full border border-zinc-200 text-zinc-600 py-2 rounded-md text-[13px] hover:bg-zinc-50 transition-colors disabled:opacity-50">
+      {loading ? 'Opening...' : 'Manage subscription'}
     </button>
   )
 }

@@ -85,10 +85,10 @@ const PRO_INTERVALS = [
 ]
 
 const chipClass = (active: boolean) =>
-  `text-xs px-3 py-1.5 rounded-md border transition-colors font-medium ${
+  `text-[12px] px-2.5 py-1 rounded-md border transition-colors font-medium ${
     active
-      ? 'bg-emerald-600 border-emerald-600 text-white'
-      : 'border-zinc-200 text-zinc-600 hover:border-emerald-300 hover:text-emerald-700'
+      ? 'bg-violet-600 border-violet-600 text-white'
+      : 'border-zinc-200 text-zinc-600 hover:border-violet-300 hover:text-violet-700'
   }`
 
 export default function NewMonitorPage() {
@@ -165,7 +165,7 @@ export default function NewMonitorPage() {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. 1BR under $2,500 in Manhattan"
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors"
           />
         </section>
 
@@ -205,12 +205,12 @@ export default function NewMonitorPage() {
             <div>
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">Min rent</label>
               <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="1000"
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-medium text-zinc-500 mb-1.5">Max rent *</label>
               <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="2500" required
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors" />
             </div>
           </div>
         </section>
@@ -249,7 +249,7 @@ export default function NewMonitorPage() {
 
         <div className="flex items-center gap-3 pt-2">
           <button type="submit" disabled={loading}
-            className="bg-emerald-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50">
+            className="bg-violet-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors disabled:opacity-50">
             {loading ? 'Creating...' : 'Create monitor'}
           </button>
           <button type="button" onClick={() => router.back()} className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors">
