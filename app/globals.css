@@ -1,17 +1,33 @@
 @import "tailwindcss";
 
-:root {
-  --background: #F8F6F3;
-  --foreground: #1C1917;
-  --card: #FEFDFB;
-  --border: #E7E5E4;
-  --muted: #78716C;
-  --accent: #3B82F6;
+@theme {
+  /* Fonts */
+  --font-serif: var(--font-serif), Georgia, serif;
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+
+  /* Warm palette */
+  --color-warm-50: #FEFDFB;
+  --color-warm-100: #F8F6F3;
+  --color-warm-200: #F3F0EB;
+  --color-warm-300: #EDE9E3;
+  --color-warm-400: #E7E5E4;
+  --color-warm-500: #D6D3D1;
+  --color-warm-600: #A8A29E;
+  --color-warm-700: #78716C;
+  --color-warm-800: #44403C;
+  --color-warm-900: #1C1917;
+
+  /* Brand blue */
+  --color-brand: #3B82F6;
+  --color-brand-hover: #2563EB;
+  --color-brand-dark: #1D4ED8;
+  --color-brand-light: #EFF6FF;
+  --color-brand-medium: #DBEAFE;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #F8F6F3;
+  color: #1C1917;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "rlig" 1, "calt" 1;
@@ -22,13 +38,11 @@ body {
   color: #1D4ED8;
 }
 
-/* Smooth scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D6D3D1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #A8A29E; }
 
-/* Animations */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
@@ -39,7 +53,6 @@ body {
   50% { opacity: 0.4; }
 }
 
-/* Remove number spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
