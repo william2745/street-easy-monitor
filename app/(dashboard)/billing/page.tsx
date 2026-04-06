@@ -26,7 +26,7 @@ export default async function BillingPage() {
         <div className="text-sm text-warm-700 space-y-2">
           {isPro ? (
             <>
-              {['Unlimited monitors', 'Scans every 10 minutes', 'Instant email alerts'].map(f => (
+              {['Unlimited monitors', 'Scans every 10 minutes', 'Instant email alerts', 'SMS text alerts'].map(f => (
                 <div key={f} className="flex items-center gap-2">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
                   {f}
@@ -57,7 +57,7 @@ export default async function BillingPage() {
         <div className="bg-warm-900 rounded-xl p-6">
           <div className="text-xs font-semibold text-brand uppercase tracking-wider mb-2">Upgrade to Pro</div>
           <div className="font-serif text-3xl text-white mb-1">$9.99<span className="text-base font-sans text-warm-600">/mo</span></div>
-          <p className="text-sm text-warm-600 mb-5">Unlimited monitors, 10-min scans, instant alerts.</p>
+          <p className="text-sm text-warm-600 mb-5">Unlimited monitors, 10-min scans, email + SMS alerts.</p>
           <BillingActions isPro={false} showUpgrade />
         </div>
       )}
