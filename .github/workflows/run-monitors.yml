@@ -1,0 +1,18 @@
+name: Run Monitors
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # every 15 minutes
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger monitor scan
+        run: |
+          curl -s -X GET \
+            "https://street-easy-monitor.vercel.app/api/cron/run-monitors" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail-with-body
