@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { Monitor } from '@/types/database'
+import { Monitor, ListingMatch } from '@/types/database'
+import { sendListingAlert } from '@/lib/resend/sendAlert'
 
 // memo23 actor returns GraphQL-flattened fields with node_ prefix
 type ActorItem = Record<string, unknown>
@@ -155,7 +156,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 listed_at: l.listedAt,
               }))
 
-              await serviceSupabase.from('listing_matches').insert(matchRows)
+              const { data: insertedMatches } = await serviceSupabase
+                .from('listing_matches')
+                .insert(matchRows)
+                .select()
+
+              // Send email notification
+              if (insertedMatches && insertedMatches.length > 0) {
+                try {
+                  const { data: profile } = await serviceSupabase
+                    .from('profiles')
+                    .select('email')
+                    .eq('id', user.id)
+                    .single()
+
+                  if (profile?.email) {
+                    await sendListingAlert(
+                      profile.email,
+                      (monitor as Monitor).name,
+                      insertedMatches as ListingMatch[]
+                    )
+                    console.log(`[run-status] email sent to ${profile.email} with ${insertedMatches.length} matches`)
+                  }
+                } catch (emailErr) {
+                  console.error('[run-status] email send error:', emailErr)
+                }
+              }
             }
           }
         } catch (err) {

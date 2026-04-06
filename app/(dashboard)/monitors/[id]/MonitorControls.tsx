@@ -7,37 +7,39 @@ import { Monitor } from '@/types/database'
 
 type RunState = 'idle' | 'queued' | 'running' | 'done' | 'failed'
 
+function Spinner() {
+  return (
+    <svg className="animate-spin -ml-0.5 mr-1.5 h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+  )
+}
+
 export default function MonitorControls({ monitor }: { monitor: Monitor }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [runState, setRunState] = useState<RunState>('idle')
   const [runError, setRunError] = useState('')
   const [newMatches, setNewMatches] = useState<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function clearTimers() {
     if (pollRef.current) clearInterval(pollRef.current)
-    if (timerRef.current) clearInterval(timerRef.current)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
     pollRef.current = null
-    timerRef.current = null
+    timeoutRef.current = null
   }
 
   function startPolling() {
-    setElapsed(0)
-    timerRef.current = setInterval(() => {
-      setElapsed(e => {
-        // Timeout after 90s — Playwright can take a bit longer than Cheerio
-        if (e >= 90) {
-          clearTimers()
-          setRunState('failed')
-          setRunError('Scan timed out — try again')
-          setTimeout(() => { setRunState('idle'); setRunError('') }, 8000)
-        }
-        return e + 1
-      })
-    }, 1000)
+    // Timeout after 90s
+    timeoutRef.current = setTimeout(() => {
+      clearTimers()
+      setRunState('failed')
+      setRunError('Scan timed out — try again')
+      setTimeout(() => { setRunState('idle'); setRunError('') }, 8000)
+    }, 90000)
 
     pollRef.current = setInterval(async () => {
       try {
@@ -121,7 +123,7 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
 
   function checkNowLabel() {
     if (runState === 'queued') return 'Queuing…'
-    if (runState === 'running') return `Scanning… ${elapsed}s`
+    if (runState === 'running') return 'Scanning…'
     if (runState === 'done') return newMatches === 0 ? 'No new matches' : `${newMatches} new match${newMatches === 1 ? '' : 'es'} ✓`
     if (runState === 'failed') return 'Failed — retry?'
     return 'Check now'
@@ -139,8 +141,13 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
       {/* Progress bar */}
       {isScanning && (
         <div className="w-48 h-1 bg-[#F0EBE1] rounded-full overflow-hidden">
-          <div className="h-full bg-[#C4703A] rounded-full animate-[scan_2s_ease-in-out_infinite]"
-            style={{ width: '60%', animation: 'pulse-bar 1.8s ease-in-out infinite' }} />
+          <div
+            className="h-full bg-[#C4703A] rounded-full"
+            style={{
+              width: '100%',
+              animation: 'pulse-bar 1.8s ease-in-out infinite',
+            }}
+          />
         </div>
       )}
 
@@ -152,8 +159,9 @@ export default function MonitorControls({ monitor }: { monitor: Monitor }) {
         <button
           onClick={runNow}
           disabled={isScanning || loading}
-          className={`text-sm px-4 py-2 rounded-full transition-colors disabled:cursor-not-allowed ${checkNowClass()}`}
+          className={`text-sm px-4 py-2 rounded-full transition-colors disabled:cursor-not-allowed flex items-center ${checkNowClass()}`}
         >
+          {isScanning && <Spinner />}
           {checkNowLabel()}
         </button>
         <Link

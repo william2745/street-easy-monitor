@@ -159,9 +159,8 @@ export async function POST(req: NextRequest) {
     .insert(matchRows)
     .select()
 
-  // Send email alert (pro users only)
-  const plan = await getUserPlan(userId)
-  if (plan === 'pro' && insertedMatches && insertedMatches.length > 0) {
+  // Send email alert to all users
+  if (insertedMatches && insertedMatches.length > 0) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('email')
