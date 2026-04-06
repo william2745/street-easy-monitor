@@ -4,7 +4,7 @@ export async function checkMonitorLimit(userId: string): Promise<{
   allowed: boolean
   reason?: string
 }> {
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   // Check subscription plan
   const { data: sub } = await supabase
@@ -36,7 +36,7 @@ export async function checkMonitorLimit(userId: string): Promise<{
 }
 
 export async function getUserPlan(userId: string): Promise<'free' | 'pro'> {
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
   const { data } = await supabase
     .from('subscriptions')
     .select('plan')

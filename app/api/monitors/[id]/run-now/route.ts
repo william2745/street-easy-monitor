@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (!monitor) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const serviceSupabase = await createServiceClient()
+  const serviceSupabase = createServiceClient()
   const { data: runRecord } = await serviceSupabase
     .from('scraper_runs')
     .insert({ monitor_id: id, status: 'running' })

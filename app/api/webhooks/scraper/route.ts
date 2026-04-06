@@ -5,18 +5,26 @@ import { getUserPlan } from '@/lib/monitors/checkTierLimit'
 import { ListingMatch } from '@/types/database'
 
 type ApifyListing = {
+  // memo23 actor uses node_ prefixed GraphQL-flattened fields
+  node_id?: string
+  node_urlPath?: string
+  node_price?: number
+  node_bedroomCount?: number
+  node_areaName?: string
+  node_street?: string
+  node_unit?: string
+  node_noFee?: boolean
+  node_status?: string
+  node_leadMedia_photo_key?: string
+  // fallback legacy field names
   id?: string
   listingId?: string
-  url: string
+  url?: string
+  price?: number
+  bedrooms?: number
   address?: string
   neighborhood?: string
-  bedrooms?: number
-  price?: number
   noFee?: boolean
-  petFriendly?: boolean
-  hasLaundry?: boolean
-  imageUrl?: string
-  title?: string
 }
 
 async function fetchDatasetItems(datasetId: string): Promise<ApifyListing[]> {
@@ -53,7 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing monitorId' }, { status: 400 })
   }
 
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   // Update scraper run record
   if (eventType === 'ACTOR.RUN.FAILED') {
@@ -64,13 +72,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Extract listing IDs from URLs (e.g. /rental/12345678 or /building/foo/unit)
-  const withIds = listings.map(l => {
-    const extractedId = l.listingId ?? l.id ?? extractListingId(l.url)
-    return { ...l, resolvedId: extractedId }
-  }).filter(l => l.resolvedId)
+  // Normalize memo23 actor's node_-prefixed GraphQL fields + legacy fallbacks
+  const normalized = listings.map(l => {
+    const urlPath = l.node_urlPath
+    const url = urlPath ? `https://streeteasy.com${urlPath}` : (l.url ?? '')
+    const street = l.node_street
+    const unit = l.node_unit
+    const builtAddress = [street, unit ? `#${unit}` : ''].filter(Boolean).join(' ') || undefined
+    const address = l.address ?? builtAddress
+    return {
+      ...l,
+      resolvedId: l.node_id ?? l.listingId ?? l.id ?? extractListingId(url),
+      url,
+      price: l.node_price ?? l.price,
+      bedrooms: l.node_bedroomCount ?? l.bedrooms,
+      neighborhood: l.node_areaName ?? l.neighborhood,
+      address,
+      noFee: l.node_noFee ?? l.noFee,
+      title: address,
+      status: l.node_status,
+    }
+  }).filter(l => l.resolvedId && l.status !== 'INACTIVE')
 
-  if (withIds.length === 0) {
+  if (normalized.length === 0) {
     await supabase
       .from('scraper_runs')
       .update({ status: 'succeeded', listings_found: 0, new_matches: 0, finished_at: new Date().toISOString() })
@@ -79,7 +103,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Bulk deduplication check
-  const ids = withIds.map(l => l.resolvedId!)
+  const ids = normalized.map(l => l.resolvedId!)
   const { data: alreadySeen } = await supabase
     .from('seen_listings')
     .select('listing_id')
@@ -87,7 +111,7 @@ export async function POST(req: NextRequest) {
     .in('listing_id', ids)
 
   const seenSet = new Set((alreadySeen ?? []).map(r => r.listing_id))
-  const newListings = withIds.filter(l => !seenSet.has(l.resolvedId!))
+  const newListings = normalized.filter(l => !seenSet.has(l.resolvedId!))
 
   if (newListings.length === 0) {
     await supabase.from('monitors').update({ last_run_at: new Date().toISOString() }).eq('id', monitorId)
@@ -115,9 +139,9 @@ export async function POST(req: NextRequest) {
     bedrooms: l.bedrooms ?? null,
     price: l.price ?? null,
     no_fee: l.noFee ?? null,
-    pet_friendly: l.petFriendly ?? null,
-    has_laundry: l.hasLaundry ?? null,
-    image_url: l.imageUrl ?? null,
+    pet_friendly: null,
+    has_laundry: null,
+    image_url: null,
     listing_url: l.url,
   }))
 
