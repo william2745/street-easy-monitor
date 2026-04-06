@@ -9,11 +9,11 @@ type SortDir = 'asc' | 'desc'
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'now'
-  if (mins < 60) return `${mins}m`
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h`
-  return `${Math.floor(hours / 24)}d`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
 function shortDate(dateStr: string): string {
@@ -49,8 +49,7 @@ export default function MatchList({
     r.sort((a, b) => {
       if (sortField === 'price') return sortDir === 'asc' ? (a.price ?? 0) - (b.price ?? 0) : (b.price ?? 0) - (a.price ?? 0)
       if (sortField === 'listed_at') {
-        const da = a.listed_at ? new Date(a.listed_at).getTime() : 0
-        const db = b.listed_at ? new Date(b.listed_at).getTime() : 0
+        const da = a.listed_at ? new Date(a.listed_at).getTime() : 0, db = b.listed_at ? new Date(b.listed_at).getTime() : 0
         return sortDir === 'asc' ? da - db : db - da
       }
       return sortDir === 'asc' ? new Date(a.found_at).getTime() - new Date(b.found_at).getTime() : new Date(b.found_at).getTime() - new Date(a.found_at).getTime()
@@ -64,90 +63,104 @@ export default function MatchList({
   }
 
   const arrow = (f: SortField) => sortField === f ? (sortDir === 'asc' ? ' \u2191' : ' \u2193') : ''
-  const pill = (f: SortField) => `text-[11px] px-2 py-0.5 rounded border cursor-pointer transition-colors font-medium ${
-    sortField === f ? 'bg-zinc-900 text-white border-zinc-900' : 'text-zinc-500 border-zinc-200 hover:border-zinc-300'
-  }`
+  const pillCls = (f: SortField) =>
+    `text-xs px-2.5 py-1 rounded-lg border font-medium transition-all cursor-pointer ${
+      sortField === f
+        ? 'bg-brand text-white border-brand shadow-sm'
+        : 'bg-warm-50 text-warm-700 border-warm-400 hover:border-brand/40 hover:text-brand'
+    }`
+
+  const colCount = hasListedAt ? 7 : 6
+  const gridCols = hasListedAt
+    ? 'grid-cols-[90px_1fr_80px_64px_72px_80px_28px]'
+    : 'grid-cols-[90px_1fr_80px_64px_80px_28px]'
 
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <button onClick={() => toggleSort('found_at')} className={pill('found_at')}>Found{arrow('found_at')}</button>
-        {hasListedAt && <button onClick={() => toggleSort('listed_at')} className={pill('listed_at')}>Available{arrow('listed_at')}</button>}
-        <button onClick={() => toggleSort('price')} className={pill('price')}>Price{arrow('price')}</button>
-        <div className="w-px h-3 bg-zinc-200 mx-0.5" />
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-semibold text-warm-600 uppercase tracking-wider mr-1">Sort</span>
+        <button onClick={() => toggleSort('found_at')} className={pillCls('found_at')}>Found{arrow('found_at')}</button>
+        {hasListedAt && <button onClick={() => toggleSort('listed_at')} className={pillCls('listed_at')}>Available{arrow('listed_at')}</button>}
+        <button onClick={() => toggleSort('price')} className={pillCls('price')}>Price{arrow('price')}</button>
+
+        <div className="w-px h-5 bg-warm-400 mx-1" />
+
         <select value={bedroomFilter === 'all' ? 'all' : String(bedroomFilter)} onChange={e => setBedroomFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          className="text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 bg-white text-zinc-600 focus:outline-none focus:border-violet-400">
+          className="text-xs px-2.5 py-1 rounded-lg border border-warm-400 bg-warm-50 text-warm-700 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
           <option value="all">All beds</option>
-          {bedroomOptions.map(b => <option key={b} value={b}>{b === 0 ? 'Studio' : `${b}BR`}</option>)}
+          {bedroomOptions.map(b => <option key={b} value={b}>{b === 0 ? 'Studio' : `${b} BR`}</option>)}
         </select>
+
         <select value={feeFilter} onChange={e => setFeeFilter(e.target.value as 'all' | 'no_fee')}
-          className="text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 bg-white text-zinc-600 focus:outline-none focus:border-violet-400">
+          className="text-xs px-2.5 py-1 rounded-lg border border-warm-400 bg-warm-50 text-warm-700 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
           <option value="all">Any fee</option>
-          <option value="no_fee">No fee</option>
+          <option value="no_fee">No fee only</option>
         </select>
-        <span className="text-[11px] text-zinc-400 ml-auto tabular-nums">{filtered.length}/{matches.length}</span>
+
+        <span className="text-xs text-warm-600 ml-auto tabular-nums">{filtered.length} of {matches.length}</span>
       </div>
 
       {/* Table */}
-      <div className="border border-zinc-200 rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-zinc-50 border-b border-zinc-200">
-              <th className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2 w-[80px]">Price</th>
-              <th className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2">Address</th>
-              <th className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2 w-[72px]">Beds</th>
-              <th className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2 w-[56px]">Fee</th>
-              {hasListedAt && <th className="text-right text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2 w-[64px]">Avail</th>}
-              <th className="text-right text-[11px] font-semibold text-zinc-500 uppercase tracking-wider px-3 py-2 w-[48px]">Found</th>
-              <th className="w-[28px]"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {filtered.map(match => {
-              const isNew = newRunStart ? new Date(match.found_at) >= new Date(newRunStart) : false
-              return (
-                <tr key={match.id} className={`group hover:bg-zinc-50 transition-colors ${isNew ? 'bg-violet-50/30' : ''}`}>
-                  <td className="px-3 py-2.5 text-[13px] font-semibold text-zinc-900 tabular-nums">
-                    {match.price != null ? `$${match.price.toLocaleString()}` : '—'}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <a href={match.listing_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[13px] text-zinc-700 truncate group-hover:text-violet-600 transition-colors">
-                        {match.address ?? match.neighborhood ?? 'NYC listing'}
-                      </span>
-                      {isNew && <span className="text-[9px] font-bold bg-violet-600 text-white px-1 py-px rounded uppercase shrink-0">new</span>}
-                    </a>
-                  </td>
-                  <td className="px-3 py-2.5 text-[12px] text-zinc-500">
-                    {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms}BR`) : '—'}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {match.no_fee
-                      ? <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">NF</span>
-                      : <span className="text-[11px] text-zinc-300">—</span>}
-                  </td>
-                  {hasListedAt && (
-                    <td className="px-3 py-2.5 text-right text-[12px] text-zinc-400 tabular-nums">
-                      {match.listed_at ? shortDate(match.listed_at) : '—'}
-                    </td>
-                  )}
-                  <td className="px-3 py-2.5 text-right text-[12px] text-zinc-400 tabular-nums">{relativeTime(match.found_at)}</td>
-                  <td className="px-2 py-2.5">
-                    <a href={match.listing_url} target="_blank" rel="noopener noreferrer" className="text-zinc-200 group-hover:text-violet-500 transition-colors">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
-                    </a>
-                  </td>
-                </tr>
-              )
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={hasListedAt ? 7 : 6} className="px-3 py-6 text-center text-[13px] text-zinc-400">No matches with current filters</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="bg-warm-50 rounded-xl border border-warm-400 overflow-hidden">
+        <div className={`grid ${gridCols} gap-3 px-5 py-3 bg-warm-200/50 border-b border-warm-400`}>
+          <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Price</div>
+          <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Address</div>
+          <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Beds</div>
+          <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Fee</div>
+          {hasListedAt && <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Avail</div>}
+          <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider text-right">Found</div>
+          <div></div>
+        </div>
+
+        <div className="divide-y divide-warm-400/50">
+          {filtered.map(match => {
+            const isNew = newRunStart ? new Date(match.found_at) >= new Date(newRunStart) : false
+            return (
+              <a
+                key={match.id}
+                href={match.listing_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`grid ${gridCols} gap-3 px-5 py-3.5 items-center transition-colors group ${
+                  isNew ? 'bg-brand-light/40' : 'hover:bg-warm-200/30'
+                }`}
+              >
+                <div className="text-[15px] font-semibold text-warm-900 tabular-nums">
+                  {match.price != null ? `$${match.price.toLocaleString()}` : '—'}
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm text-warm-800 truncate group-hover:text-brand transition-colors">
+                    {match.address ?? match.neighborhood ?? 'NYC listing'}
+                  </span>
+                  {isNew && <span className="text-[10px] font-bold bg-brand text-white px-1.5 py-0.5 rounded uppercase shrink-0">New</span>}
+                </div>
+                <div className="text-sm text-warm-700">
+                  {match.bedrooms != null ? (match.bedrooms === 0 ? 'Studio' : `${match.bedrooms} BR`) : '—'}
+                </div>
+                <div>
+                  {match.no_fee
+                    ? <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">NF</span>
+                    : <span className="text-sm text-warm-600">—</span>}
+                </div>
+                {hasListedAt && (
+                  <div className="text-sm text-warm-600 tabular-nums">{match.listed_at ? shortDate(match.listed_at) : '—'}</div>
+                )}
+                <div className="text-sm text-warm-600 text-right tabular-nums">{relativeTime(match.found_at)}</div>
+                <div className="flex justify-end">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-warm-500 group-hover:text-brand transition-colors" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </div>
+              </a>
+            )
+          })}
+          {filtered.length === 0 && (
+            <div className={`grid ${gridCols} px-5 py-8`}>
+              <div className={`col-span-${colCount} text-center text-sm text-warm-600`}>No matches with current filters</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

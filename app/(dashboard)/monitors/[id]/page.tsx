@@ -13,17 +13,17 @@ function toEastern(dateStr: string): string {
 }
 
 function nextRunLabel(lastRunAt: string | null, interval: number): string {
-  if (!lastRunAt) return 'Pending'
+  if (!lastRunAt) return 'Pending first scan'
   const next = addMinutes(new Date(lastRunAt), interval)
   if (isPast(next)) return 'Due now'
   return formatDistanceToNow(next, { addSuffix: true })
 }
 
 function intervalLabel(mins: number): string {
-  if (mins < 60) return `${mins}min`
+  if (mins < 60) return `Every ${mins} min`
   if (mins === 60) return 'Hourly'
   if (mins === 1440) return 'Daily'
-  return `${mins / 60}h`
+  return `Every ${mins / 60}h`
 }
 
 export default async function MonitorDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -54,50 +54,57 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-5">
-        <div>
-          <Link href="/monitors" className="text-[11px] text-zinc-400 hover:text-violet-600 transition-colors mb-1 inline-flex items-center gap-0.5">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-            Monitors
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${monitor.is_active ? 'bg-violet-500' : 'bg-zinc-300'}`} />
-            <h1 className="text-[15px] font-semibold text-zinc-900">{monitor.name}</h1>
+      <div className="mb-8">
+        <Link href="/monitors" className="text-sm text-warm-600 hover:text-brand transition-colors mb-3 inline-flex items-center gap-1">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Monitors
+        </Link>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <span className={`w-3 h-3 rounded-full ${monitor.is_active ? 'bg-brand' : 'bg-warm-500'}`}
+                style={monitor.is_active ? { animation: 'pulse-dot 3s ease-in-out infinite' } : undefined} />
+              <h1 className="font-serif text-3xl text-warm-900">{monitor.name}</h1>
+            </div>
+            <p className="text-sm text-warm-700">{monitor.neighborhoods.join(', ')}</p>
           </div>
-          <div className="text-[12px] text-zinc-400 mt-0.5">{monitor.neighborhoods.join(', ')}</div>
+          <MonitorControls monitor={monitor} />
         </div>
-        <MonitorControls monitor={monitor} />
       </div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-5 gap-px bg-zinc-200 rounded-lg overflow-hidden mb-5 border border-zinc-200">
+      {/* Stats bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-warm-400 rounded-xl overflow-hidden border border-warm-400 mb-8">
         {[
-          { label: 'Max rent', value: `$${monitor.max_price.toLocaleString()}` },
-          { label: 'Beds', value: monitor.bedrooms?.length ? monitor.bedrooms.map((b: number) => b === 0 ? 'Studio' : `${b}BR`).join(', ') : 'Any' },
+          { label: 'Max Rent', value: `$${monitor.max_price.toLocaleString()}/mo` },
+          { label: 'Bedrooms', value: monitor.bedrooms?.length ? monitor.bedrooms.map((b: number) => b === 0 ? 'Studio' : `${b}BR`).join(', ') : 'Any' },
           { label: 'Frequency', value: intervalLabel(scanInterval) },
-          { label: 'Next scan', value: nextRunLabel(monitor.last_run_at, scanInterval) },
-          { label: 'Last scan', value: monitor.last_run_at ? toEastern(monitor.last_run_at) : '—' },
-        ].map(s => (
-          <div key={s.label} className="bg-white px-3 py-2.5">
-            <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">{s.label}</div>
-            <div className="text-[13px] font-medium text-zinc-900 mt-0.5 truncate">{s.value}</div>
+          { label: 'Next Scan', value: nextRunLabel(monitor.last_run_at, scanInterval) },
+          { label: 'Last Scan', value: monitor.last_run_at ? toEastern(monitor.last_run_at) : 'Never' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-warm-50 px-4 py-3.5">
+            <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider mb-1">{stat.label}</div>
+            <div className="text-sm font-medium text-warm-900 truncate">{stat.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Summary */}
+      {/* Quick summary */}
       {matchCount > 0 && (
-        <div className="flex items-center gap-4 mb-4 text-[12px]">
-          <span className="text-zinc-500"><strong className="text-zinc-900 font-semibold">{matchCount}</strong> listings</span>
-          {avgPrice > 0 && <span className="text-zinc-500">avg <strong className="text-zinc-900 font-semibold">${avgPrice.toLocaleString()}</strong>/mo</span>}
-          {noFeeCount > 0 && <span className="text-zinc-500"><strong className="text-zinc-900 font-semibold">{noFeeCount}</strong> no fee</span>}
+        <div className="flex items-center gap-6 mb-6 text-sm text-warm-700">
+          <span><strong className="text-warm-900 font-semibold">{matchCount}</strong> listings found</span>
+          {avgPrice > 0 && <span>Avg <strong className="text-warm-900 font-semibold">${avgPrice.toLocaleString()}</strong>/mo</span>}
+          {noFeeCount > 0 && <span><strong className="text-warm-900 font-semibold">{noFeeCount}</strong> no fee</span>}
         </div>
       )}
 
       {/* Matches */}
+      <h2 className="font-serif text-xl text-warm-900 mb-4">Matches</h2>
+
       {matchCount === 0 ? (
-        <div className="border border-zinc-200 rounded-lg p-8 text-center">
-          <p className="text-[13px] text-zinc-400">No matches yet. Hit &quot;Scan now&quot; to start.</p>
+        <div className="bg-warm-50 rounded-xl p-10 border border-warm-400 text-center">
+          <p className="text-sm text-warm-700">No matches yet. Hit &quot;Scan now&quot; to check or wait for the next scheduled run.</p>
         </div>
       ) : (
         <MatchList matches={matches as ListingMatch[]} newRunStart={currentRunStart} prevRunStart={previousRunStart} />

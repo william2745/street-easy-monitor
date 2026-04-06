@@ -24,7 +24,7 @@ export default function BillingActions({ isPro, showUpgrade = false }: { isPro: 
   if (showUpgrade || !isPro) {
     return (
       <button onClick={handleUpgrade} disabled={loading}
-        className="w-full bg-violet-600 text-white py-2 rounded-md text-[13px] font-medium hover:bg-violet-500 transition-colors disabled:opacity-50">
+        className="w-full bg-brand text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-hover transition-colors disabled:opacity-50 shadow-sm">
         {loading ? 'Redirecting...' : 'Upgrade to Pro'}
       </button>
     )
@@ -32,7 +32,7 @@ export default function BillingActions({ isPro, showUpgrade = false }: { isPro: 
 
   return (
     <button onClick={handlePortal} disabled={loading}
-      className="w-full border border-zinc-200 text-zinc-600 py-2 rounded-md text-[13px] hover:bg-zinc-50 transition-colors disabled:opacity-50">
+      className="w-full border border-warm-400 text-warm-700 py-2.5 rounded-lg text-sm hover:bg-warm-200 transition-colors disabled:opacity-50">
       {loading ? 'Opening...' : 'Manage subscription'}
     </button>
   )

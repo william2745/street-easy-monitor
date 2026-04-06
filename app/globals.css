@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FFFFFF;
-  --foreground: #111111;
+  --background: #F8F6F3;
+  --foreground: #1C1917;
+  --card: #FEFDFB;
+  --border: #E7E5E4;
+  --muted: #78716C;
+  --accent: #3B82F6;
 }
 
 body {
@@ -13,36 +17,29 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
-/* Scanning shimmer */
+::selection {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D6D3D1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A8A29E; }
+
+/* Animations */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
 
-/* Status pulse */
-@keyframes live-pulse {
+@keyframes pulse-dot {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.4; }
 }
 
-/* Row highlight fade in */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-::selection {
-  background: #D1FAE5;
-  color: #065F46;
-}
-
-/* Minimal scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E4E4E7; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
-
-/* Number inputs — remove spinners */
+/* Remove number spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;

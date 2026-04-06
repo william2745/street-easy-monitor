@@ -18,6 +18,15 @@ function intervalLabel(mins: number): string {
   return `Every ${mins / 60}h`
 }
 
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
 export default async function MonitorsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,50 +39,60 @@ export default async function MonitorsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-[15px] font-semibold text-zinc-900">Monitors</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-serif text-3xl text-warm-900">Monitors</h1>
       </div>
 
       {(monitors ?? []).length === 0 ? (
-        <div className="border-2 border-dashed border-zinc-200 rounded-xl p-16 text-center">
-          <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+        <div className="bg-warm-50 rounded-xl p-12 border-2 border-dashed border-warm-400 text-center">
+          <div className="w-12 h-12 bg-brand-light rounded-xl flex items-center justify-center mx-auto mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
           </div>
-          <p className="text-[13px] text-zinc-500 mb-4">No monitors yet</p>
-          <Link href="/monitors/new" className="inline-flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2 rounded-md text-[13px] font-medium hover:bg-violet-500 transition-colors">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <h2 className="font-serif text-xl text-warm-900 mb-2">No monitors yet</h2>
+          <p className="text-sm text-warm-700 mb-5">Create a monitor to start tracking listings.</p>
+          <Link href="/monitors/new" className="inline-flex items-center gap-2 bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-hover transition-colors shadow-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             Create monitor
           </Link>
         </div>
       ) : (
-        <div className="border border-zinc-200 rounded-lg overflow-hidden divide-y divide-zinc-100">
+        <div className="grid sm:grid-cols-2 gap-4">
           {(monitors as Monitor[]).map(monitor => (
-            <div key={monitor.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${monitor.is_active ? 'bg-violet-500' : 'bg-zinc-300'}`} />
-              <Link href={`/monitors/${monitor.id}`} className="flex-1 min-w-0 group">
+            <Link
+              key={monitor.id}
+              href={`/monitors/${monitor.id}`}
+              className="bg-warm-50 rounded-xl p-5 border border-warm-400 hover:border-brand/30 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-medium text-zinc-900 group-hover:text-violet-600 transition-colors">{monitor.name}</span>
-                  {!monitor.is_active && <span className="text-[10px] text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">Paused</span>}
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full ${monitor.is_active ? 'bg-brand' : 'bg-warm-500'}`}
+                    style={monitor.is_active ? { animation: 'pulse-dot 3s ease-in-out infinite' } : undefined}
+                  />
+                  <span className="font-serif text-lg text-warm-900 group-hover:text-brand transition-colors">{monitor.name}</span>
                 </div>
-                <div className="text-[11px] text-zinc-400 mt-0.5 truncate">
-                  {monitor.neighborhoods.join(', ')} &middot; ${monitor.max_price.toLocaleString()}/mo
-                  {(monitor.bedrooms?.length ?? 0) > 0 && <> &middot; {monitor.bedrooms!.map((b: number) => b === 0 ? 'Studio' : `${b}BR`).join(', ')}</>}
-                </div>
-              </Link>
-
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="text-right hidden sm:block">
-                  <div className="text-[11px] text-zinc-400">{intervalLabel(monitor.scan_interval ?? 1440)}</div>
-                  <div className="text-[11px] text-zinc-300 mt-0.5">
-                    {monitor.last_run_at ? `Last ${formatDistanceToNow(new Date(monitor.last_run_at), { addSuffix: true })}` : '—'}
-                  </div>
-                </div>
-                <RunNowButton monitorId={monitor.id} />
-                <Link href={`/monitors/${monitor.id}`} className="text-zinc-300 hover:text-zinc-500 transition-colors">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="9 18 15 12 9 6" /></svg>
-                </Link>
+                {!monitor.is_active && (
+                  <span className="text-xs text-warm-600 bg-warm-200 px-2 py-0.5 rounded">Paused</span>
+                )}
               </div>
-            </div>
+
+              <div className="text-sm text-warm-700 mb-1">{monitor.neighborhoods.join(', ')}</div>
+              <div className="text-sm text-warm-600">
+                Up to ${monitor.max_price.toLocaleString()}/mo
+                {(monitor.bedrooms?.length ?? 0) > 0 && (
+                  <> · {monitor.bedrooms!.map((b: number) => b === 0 ? 'Studio' : `${b}BR`).join(', ')}</>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-warm-300 text-xs text-warm-600">
+                <span>{intervalLabel(monitor.scan_interval ?? 1440)}</span>
+                <span>Next: {nextRun(monitor)}</span>
+                {monitor.last_run_at && <span>Last: {relativeTime(monitor.last_run_at)}</span>}
+                <div className="ml-auto" onClick={e => e.preventDefault()}>
+                  <RunNowButton monitorId={monitor.id} />
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
       )}

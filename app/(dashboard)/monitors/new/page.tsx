@@ -87,8 +87,8 @@ const PRO_INTERVALS = [
 const chipClass = (active: boolean) =>
   `text-[12px] px-2.5 py-1 rounded-md border transition-colors font-medium ${
     active
-      ? 'bg-violet-600 border-violet-600 text-white'
-      : 'border-zinc-200 text-zinc-600 hover:border-violet-300 hover:text-violet-700'
+      ? 'bg-brand border-brand text-white'
+      : 'border-warm-400 text-warm-700 hover:border-brand-medium hover:text-brand-hover'
   }`
 
 export default function NewMonitorPage() {
@@ -152,29 +152,29 @@ export default function NewMonitorPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-zinc-900">New monitor</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">Define your search criteria. We&apos;ll alert you when matches appear.</p>
+        <h1 className="text-xl font-semibold text-warm-900">New monitor</h1>
+        <p className="text-sm text-warm-600 mt-0.5">Define your search criteria. We&apos;ll alert you when matches appear.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
-        <section className="bg-white rounded-lg border border-zinc-200 p-5">
-          <label className="block text-sm font-medium text-zinc-900 mb-2">Monitor name</label>
+        <section className="bg-warm-50 rounded-lg border border-warm-400 p-5">
+          <label className="block text-sm font-medium text-warm-900 mb-2">Monitor name</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. 1BR under $2,500 in Manhattan"
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors"
+            className="w-full border border-warm-400 rounded-lg px-3 py-2.5 text-[13px] text-warm-900 bg-warm-50 placeholder:text-warm-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors"
           />
         </section>
 
         {/* Neighborhoods */}
-        <section className="bg-white rounded-lg border border-zinc-200 p-5">
-          <label className="block text-sm font-medium text-zinc-900 mb-3">Neighborhoods</label>
+        <section className="bg-warm-50 rounded-lg border border-warm-400 p-5">
+          <label className="block text-sm font-medium text-warm-900 mb-3">Neighborhoods</label>
           {boroughs.map(borough => (
             <div key={borough} className="mb-4 last:mb-0">
-              <div className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">{borough}</div>
+              <div className="text-xs font-medium text-warm-600 uppercase tracking-wider mb-2">{borough}</div>
               <div className="flex flex-wrap gap-1.5">
                 {NYC_NEIGHBORHOODS.filter(n => n.borough === borough).map(n => (
                   <button key={n.value} type="button" onClick={() => setSelectedNeighborhoods(prev => toggle(prev, n.value))}
@@ -188,9 +188,9 @@ export default function NewMonitorPage() {
         </section>
 
         {/* Bedrooms + Price */}
-        <section className="bg-white rounded-lg border border-zinc-200 p-5 space-y-5">
+        <section className="bg-warm-50 rounded-lg border border-warm-400 p-5 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-zinc-900 mb-2">Bedrooms</label>
+            <label className="block text-sm font-medium text-warm-900 mb-2">Bedrooms</label>
             <div className="flex flex-wrap gap-1.5">
               {BEDROOMS.map(b => (
                 <button key={b.value} type="button" onClick={() => setSelectedBedrooms(prev => toggle(prev, b.value))}
@@ -199,25 +199,25 @@ export default function NewMonitorPage() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-zinc-400 mt-2">Leave empty for any</p>
+            <p className="text-xs text-warm-600 mt-2">Leave empty for any</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Min rent</label>
+              <label className="block text-xs font-medium text-warm-600 mb-1.5">Min rent</label>
               <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="1000"
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors" />
+                className="w-full border border-warm-400 rounded-lg px-3 py-2.5 text-[13px] text-warm-900 bg-warm-50 placeholder:text-warm-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-500 mb-1.5">Max rent *</label>
+              <label className="block text-xs font-medium text-warm-600 mb-1.5">Max rent *</label>
               <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="2500" required
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2.5 text-[13px] text-zinc-900 bg-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-colors" />
+                className="w-full border border-warm-400 rounded-lg px-3 py-2.5 text-[13px] text-warm-900 bg-warm-50 placeholder:text-warm-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors" />
             </div>
           </div>
         </section>
 
         {/* Amenities */}
-        <section className="bg-white rounded-lg border border-zinc-200 p-5">
-          <label className="block text-sm font-medium text-zinc-900 mb-3">Amenities</label>
+        <section className="bg-warm-50 rounded-lg border border-warm-400 p-5">
+          <label className="block text-sm font-medium text-warm-900 mb-3">Amenities</label>
           <div className="flex flex-wrap gap-1.5">
             {AMENITIES.map(a => (
               <button key={a.value} type="button" onClick={() => setSelectedAmenities(prev => toggle(prev, a.value))}
@@ -226,13 +226,13 @@ export default function NewMonitorPage() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-zinc-400 mt-2">Leave empty for any</p>
+          <p className="text-xs text-warm-600 mt-2">Leave empty for any</p>
         </section>
 
         {/* Scan frequency */}
-        <section className="bg-white rounded-lg border border-zinc-200 p-5">
-          <label className="block text-sm font-medium text-zinc-900 mb-1">Scan frequency</label>
-          {!isPro && <p className="text-xs text-zinc-400 mb-3">Upgrade to Pro for scans as fast as every 10 minutes.</p>}
+        <section className="bg-warm-50 rounded-lg border border-warm-400 p-5">
+          <label className="block text-sm font-medium text-warm-900 mb-1">Scan frequency</label>
+          {!isPro && <p className="text-xs text-warm-600 mb-3">Upgrade to Pro for scans as fast as every 10 minutes.</p>}
           <div className="flex flex-wrap gap-1.5">
             {intervals.map(i => (
               <button key={i.value} type="button" onClick={() => setScanInterval(i.value)}
@@ -249,10 +249,10 @@ export default function NewMonitorPage() {
 
         <div className="flex items-center gap-3 pt-2">
           <button type="submit" disabled={loading}
-            className="bg-violet-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors disabled:opacity-50">
+            className="bg-brand text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-hover transition-colors disabled:opacity-50">
             {loading ? 'Creating...' : 'Create monitor'}
           </button>
-          <button type="button" onClick={() => router.back()} className="text-sm text-zinc-500 hover:text-zinc-700 transition-colors">
+          <button type="button" onClick={() => router.back()} className="text-sm text-warm-600 hover:text-warm-800 transition-colors">
             Cancel
           </button>
         </div>

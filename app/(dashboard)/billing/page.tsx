@@ -8,36 +8,43 @@ export default async function BillingPage() {
   const isPro = sub?.plan === 'pro'
 
   return (
-    <div className="max-w-md">
-      <h1 className="text-[15px] font-semibold text-zinc-900 mb-5">Billing</h1>
+    <div className="max-w-lg">
+      <h1 className="font-serif text-3xl text-warm-900 mb-8">Billing</h1>
 
-      <div className="border border-zinc-200 rounded-lg p-5 mb-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-warm-50 rounded-xl p-6 border border-warm-400 mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Plan</div>
-            <div className="text-[15px] font-semibold text-zinc-900 mt-0.5">{isPro ? 'Pro' : 'Free'}</div>
+            <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider mb-1">Current Plan</div>
+            <div className="font-serif text-2xl text-warm-900">{isPro ? 'Pro' : 'Free'}</div>
           </div>
-          <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${isPro ? 'bg-violet-50 text-violet-700 border border-violet-100' : 'bg-zinc-100 text-zinc-500'}`}>
+          <span className={`text-xs px-3 py-1 rounded-full font-medium ${isPro ? 'bg-brand-light text-brand-dark border border-brand-medium' : 'bg-warm-200 text-warm-700'}`}>
             {isPro ? 'Active' : 'Free tier'}
           </span>
         </div>
-        <div className="text-[13px] text-zinc-500 space-y-1">
+
+        <div className="text-sm text-warm-700 space-y-2">
           {isPro ? (
             <>
-              <div>Unlimited monitors</div>
-              <div>Scans every 10 min</div>
-              <div>Instant email alerts</div>
+              {['Unlimited monitors', 'Scans every 10 minutes', 'Instant email alerts'].map(f => (
+                <div key={f} className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                  {f}
+                </div>
+              ))}
               {sub?.current_period_end && (
-                <div className="pt-2 mt-2 border-t border-zinc-100 text-[12px] text-zinc-400">
+                <div className="pt-3 mt-3 border-t border-warm-400 text-xs text-warm-600">
                   Renews {new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </div>
               )}
             </>
           ) : (
             <>
-              <div>1 active monitor</div>
-              <div>Daily scans</div>
-              <div className="text-zinc-400">Email alerts included</div>
+              {['1 active monitor', 'Daily scans', 'Email alerts'].map(f => (
+                <div key={f} className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                  {f}
+                </div>
+              ))}
             </>
           )}
         </div>
@@ -46,10 +53,10 @@ export default async function BillingPage() {
       {isPro ? (
         <BillingActions isPro={isPro} />
       ) : (
-        <div className="bg-zinc-900 rounded-lg p-5">
-          <div className="text-[11px] font-bold text-violet-400 uppercase tracking-wider mb-1">Upgrade to Pro</div>
-          <div className="text-xl font-bold text-white">$9.99<span className="text-[13px] font-normal text-zinc-400">/mo</span></div>
-          <p className="text-[13px] text-zinc-400 mt-1 mb-4">Unlimited monitors, 10-min scans, priority alerts.</p>
+        <div className="bg-warm-900 rounded-xl p-6">
+          <div className="text-xs font-semibold text-brand uppercase tracking-wider mb-2">Upgrade to Pro</div>
+          <div className="font-serif text-3xl text-white mb-1">$9.99<span className="text-base font-sans text-warm-600">/mo</span></div>
+          <p className="text-sm text-warm-600 mb-5">Unlimited monitors, 10-min scans, instant alerts.</p>
           <BillingActions isPro={false} showUpgrade />
         </div>
       )}

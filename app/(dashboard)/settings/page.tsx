@@ -6,12 +6,12 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <div className="max-w-md">
-      <h1 className="text-[15px] font-semibold text-zinc-900 mb-5">Settings</h1>
+    <div className="max-w-lg">
+      <h1 className="font-serif text-3xl text-warm-900 mb-8">Settings</h1>
 
-      <div className="border border-zinc-200 rounded-lg p-5 mb-4">
-        <div className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">Account</div>
-        <div className="text-[13px] text-zinc-900">{user?.email}</div>
+      <div className="bg-warm-50 rounded-xl p-6 border border-warm-400 mb-4">
+        <div className="text-xs font-semibold text-warm-600 uppercase tracking-wider mb-1">Account</div>
+        <div className="text-sm text-warm-900">{user?.email}</div>
       </div>
 
       <SignOutButton />
